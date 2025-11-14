@@ -10,6 +10,8 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "test": "pnpm -r --parallel test",
+    "test:integration": "pnpm run test:integration:neo4j",
+    "test:integration:neo4j": "pnpm --filter @mcp-rag/neo4j test:integration",
     "clean": "pnpm -r exec rm -rf dist node_modules",
     "clean:dist": "pnpm -r exec rm -rf dist",
     "typecheck": "pnpm -r typecheck",
