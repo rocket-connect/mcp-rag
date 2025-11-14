@@ -1,94 +1,72 @@
 /**
- * Core types for mcp-rag
+ * Shared types for @mcp-rag packages
  */
 
-import type { LanguageModel, Tool } from 'ai'
+import type { LanguageModel } from 'ai'
+import type { Tool } from 'ai'
 import type { Driver, Session } from 'neo4j-driver'
-import type { z } from 'zod'
 
-/**
- * Configuration for creating an MCP RAG client
- */
+// ============================================================================
+// Core Configuration
+// ============================================================================
+
+export interface MigrationConfig {
+  /**
+   * Determine if migration is needed
+   * Default: checks if any tools exist in database
+   */
+  shouldMigrate?: (session: Session) => Promise<boolean>
+
+  /**
+   * Custom migration implementation
+   * Default: creates Tool nodes with standard schema
+   */
+  migrate?: (session: Session, tools: Record<string, Tool>) => Promise<void>
+
+  /**
+   * Hook to modify migration statements before execution
+   * Useful for multi-tenant scenarios
+   */
+  onBeforeMigrate?: (
+    statements: Array<{ cypher: string; params: Record<string, any> }>
+  ) => Promise<Array<{ cypher: string; params: Record<string, any> }>>
+}
+
 export interface MCPRagConfig {
   /**
-   * The language model to use for generation
+   * AI SDK language model
    */
   model: LanguageModel
 
   /**
-   * Neo4j driver instance for context persistence
+   * Neo4j driver instance
    */
   neo4j: Driver
 
   /**
-   * Tools available to the model
+   * Tool definitions
    */
   tools: Record<string, Tool>
 
   /**
-   * Optional embedding model for semantic tool selection
-   * Defaults to OpenAI's text-embedding-3-small
-   */
-  embeddingModel?: any // EmbeddingModel from AI SDK
-
-  /**
-   * Optional custom embedding function
-   */
-  embedding?: (text: string) => Promise<number[]>
-
-  /**
-   * Maximum number of active tools per request
+   * Maximum number of tools to make active per request
    * @default 10
    */
   maxActiveTools?: number
 
   /**
-   * Optional migration configuration
+   * Migration configuration
    */
   migration?: MigrationConfig
 }
 
-/**
- * Migration configuration for Neo4j schema management
- */
-export interface MigrationConfig {
-  /**
-   * Hook called before migrations are applied
-   */
-  onBeforeMigrate?: (
-    statements: MigrationStatement[]
-  ) => Promise<MigrationStatement[]>
+// ============================================================================
+// Client Interface
+// ============================================================================
 
-  /**
-   * Hook called after migrations are applied
-   */
-  onAfterMigrate?: (session: Session) => Promise<void>
-
-  /**
-   * Custom check to determine if migration is needed
-   */
-  shouldMigrate?: (session: Session) => Promise<boolean>
-
-  /**
-   * Completely override the default migration logic
-   */
-  migrate?: (session: Session, tools: Record<string, Tool>) => Promise<void>
-}
-
-/**
- * A Cypher statement with parameters for migration
- */
-export interface MigrationStatement {
-  cypher: string
-  params: Record<string, any>
-}
-
-/**
- * Options for generating text
- */
 export interface GenerateOptions {
   /**
-   * The user's prompt
+   * The prompt to generate from
    */
   prompt: string
 
@@ -98,18 +76,18 @@ export interface GenerateOptions {
   sessionId?: string
 
   /**
-   * Manually specify which tools should be active
-   * Overrides semantic tool selection
+   * Explicitly specify which tools to make active
+   * If not provided, tools are selected semantically
    */
   activeTools?: string[]
 
   /**
-   * Temperature for generation (0-1)
+   * Temperature for generation
    */
   temperature?: number
 
   /**
-   * Maximum tokens to generate
+   * Max tokens to generate
    */
   maxTokens?: number
 
@@ -119,103 +97,28 @@ export interface GenerateOptions {
   [key: string]: any
 }
 
-/**
- * Options for streaming text
- */
-export interface StreamOptions extends GenerateOptions {
-  /**
-   * Callback for each chunk of text
-   */
-  onChunk?: (chunk: string) => void
-
-  /**
-   * Callback when a tool is called
-   */
-  onToolCall?: (toolName: string, input: any) => void
-
-  /**
-   * Callback when a tool returns a result
-   */
-  onToolResult?: (toolName: string, result: any) => void
-}
-
-/**
- * Result from text generation
- */
 export interface GenerateResult {
   /**
-   * The generated text
+   * Generated text
    */
   text: string
 
   /**
-   * Tools that were called during generation
+   * Tools that were used
    */
-  toolCalls: ToolCall[]
+  toolsUsed: string[]
 
   /**
-   * Results from tool executions
+   * Additional metadata
    */
-  toolResults: ToolResult[]
-
-  /**
-   * Token usage statistics
-   */
-  usage?: {
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-  }
+  [key: string]: any
 }
 
-/**
- * A tool call made by the model
- */
-export interface ToolCall {
-  /**
-   * Unique ID for this tool call
-   */
-  toolCallId: string
-
-  /**
-   * Name of the tool being called
-   */
-  toolName: string
-
-  /**
-   * Input arguments for the tool
-   */
-  input: any
+export interface StreamOptions extends Omit<GenerateOptions, 'prompt'> {
+  prompt: string
+  sessionId: string
 }
 
-/**
- * Result from executing a tool
- */
-export interface ToolResult {
-  /**
-   * ID of the tool call this result is for
-   */
-  toolCallId: string
-
-  /**
-   * Name of the tool that was executed
-   */
-  toolName: string
-
-  /**
-   * Output from the tool execution
-   */
-  output: any
-
-  /**
-   * Error if the tool execution failed
-   */
-  error?: Error
-}
-
-/**
- * The main MCP RAG client interface
- */
 export interface MCPRagClient {
   /**
    * Generate text with smart tool management
@@ -223,7 +126,7 @@ export interface MCPRagClient {
   generate(options: GenerateOptions): Promise<GenerateResult>
 
   /**
-   * Stream text generation with tool execution
+   * Stream responses with tool execution
    */
   stream(options: StreamOptions): AsyncGenerator<string>
 
@@ -233,107 +136,24 @@ export interface MCPRagClient {
   sync(): Promise<void>
 
   /**
-   * Add a new tool to the client
+   * Add a new tool at runtime
    */
   addTool(name: string, tool: Tool): void
 
   /**
-   * Remove a tool from the client
+   * Remove a tool at runtime
    */
   removeTool(name: string): void
 
   /**
-   * Get all available tools
+   * Get all registered tools
    */
   getTools(): Record<string, Tool>
-
-  /**
-   * Close the Neo4j driver connection
-   */
-  close(): Promise<void>
 }
 
-/**
- * Context stored in Neo4j for a session
- */
-export interface SessionContext {
-  /**
-   * Unique session identifier
-   */
-  sessionId: string
+// ============================================================================
+// Utility Types
+// ============================================================================
 
-  /**
-   * Messages in this session
-   */
-  messages: Message[]
-
-  /**
-   * Tool calls made in this session
-   */
-  toolCalls: ToolCall[]
-
-  /**
-   * When the session was created
-   */
-  createdAt: Date
-
-  /**
-   * When the session was last updated
-   */
-  updatedAt: Date
-}
-
-/**
- * A message in a conversation
- */
-export interface Message {
-  /**
-   * Role of the message sender
-   */
-  role: 'user' | 'assistant' | 'system'
-
-  /**
-   * Content of the message
-   */
-  content: string
-
-  /**
-   * When the message was created
-   */
-  timestamp: Date
-}
-
-/**
- * Tool metadata stored in Neo4j
- */
-export interface ToolMetadata {
-  /**
-   * Tool name
-   */
-  name: string
-
-  /**
-   * Tool description
-   */
-  description: string
-
-  /**
-   * Zod schema for inputs
-   */
-  schema: z.ZodSchema
-
-  /**
-   * Embedding vector for semantic search
-   */
-  embedding: number[]
-
-  /**
-   * Number of times this tool has been called
-   */
-  usageCount: number
-
-  /**
-   * When the tool was last used
-   */
-  lastUsedAt?: Date
-}
+export type { Tool, LanguageModel } from 'ai'
+export type { Driver, Session } from 'neo4j-driver'

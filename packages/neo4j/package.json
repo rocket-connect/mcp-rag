@@ -1,7 +1,7 @@
 {
-  "name": "@mcp-rag/client",
+  "name": "@mcp-rag/neo4j",
   "version": "0.1.0",
-  "description": "MCP RAG - Context-aware tool management for AI SDK",
+  "description": "Neo4j utilities for MCP RAG - Cypher building and test assertions",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -21,25 +21,20 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "ai": ">=5.0.0",
-    "neo4j-driver": ">6.0.0"
-  },
-  "dependencies": {
-    "@mcp-rag/types": "workspace:*",
-    "@mcp-rag/neo4j": "workspace:*"
+    "ai": "^5.0.93",
+    "neo4j-driver": "^6.0.1"
   },
   "devDependencies": {
+    "@mcp-rag/types": "workspace:*",
     "ai": "^5.0.93",
     "neo4j-driver": "^6.0.1"
   },
   "keywords": [
-    "ai",
-    "rag",
-    "mcp",
-    "ai-sdk",
     "neo4j",
-    "tools",
-    "agents"
+    "cypher",
+    "testing",
+    "mcp",
+    "rag"
   ],
   "author": "rconnect.tech",
   "license": "MIT"

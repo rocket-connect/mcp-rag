@@ -35,31 +35,31 @@ importers:
 
   packages/client:
     dependencies:
+      '@mcp-rag/neo4j':
+        specifier: workspace:*
+        version: link:../neo4j
+      '@mcp-rag/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
       ai:
         specifier: ^5.0.93
         version: 5.0.93(zod@4.1.12)
       neo4j-driver:
         specifier: ^6.0.1
         version: 6.0.1
-      zod:
-        specifier: ^4.1.12
-        version: 4.1.12
+
+  packages/neo4j:
     devDependencies:
       '@mcp-rag/types':
         specifier: workspace:*
         version: link:../types
-      '@mcp-rag/utils':
-        specifier: workspace:*
-        version: link:../utils
-      tsup:
-        specifier: ^8.0.1
-        version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
-      vitest:
-        specifier: ^1.2.0
-        version: 1.6.1(@types/node@20.19.25)
+      ai:
+        specifier: ^5.0.93
+        version: 5.0.93(zod@4.1.12)
+      neo4j-driver:
+        specifier: ^6.0.1
+        version: 6.0.1
 
   packages/types:
     dependencies:
