@@ -1,0 +1,42 @@
+{
+  "name": "@mcp-rag/utils",
+  "version": "0.0.0",
+  "description": "Utility functions for mcp-rag",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "utilities",
+    "helpers"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@mcp-rag/types": "workspace:*",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "dependencies": {
+    "ai": "^5.0.93",
+    "neo4j-driver": "^6.0.1",
+    "zod": "^4.1.12"
+  }
+}

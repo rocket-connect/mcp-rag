@@ -1,0 +1,61 @@
+{
+  "name": "@mcp-rag/client",
+  "version": "0.0.0",
+  "description": "AI SDK tool orchestration without the headache",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "ai",
+    "ai-sdk",
+    "mcp",
+    "rag",
+    "neo4j",
+    "tools",
+    "orchestration",
+    "vercel-ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rconnect-tech/mcp-rag.git",
+    "directory": "packages/client"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@mcp-rag/types": "workspace:*",
+    "@mcp-rag/utils": "workspace:*",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "dependencies": {
+    "ai": "^5.0.93",
+    "neo4j-driver": "^6.0.1",
+    "zod": "^4.1.12"
+  },
+  "peerDependencies": {
+    "ai": ">=5.0.0",
+    "neo4j-driver": ">=6.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
