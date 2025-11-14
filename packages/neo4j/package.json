@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "ai": "^5.0.93",
@@ -26,8 +27,11 @@
   },
   "devDependencies": {
     "@mcp-rag/types": "workspace:*",
+    "@types/node": "^20.11.0",
+    "@vitest/ui": "^2.1.8",
     "ai": "^5.0.93",
-    "neo4j-driver": "^6.0.1"
+    "neo4j-driver": "^6.0.1",
+    "vitest": "^4.0.9"
   },
   "keywords": [
     "neo4j",

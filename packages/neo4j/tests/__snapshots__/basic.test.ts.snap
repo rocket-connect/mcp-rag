@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Basic Tool Array Unwinding > should produce cypher statement that unwinds array and creates node 1`] = `
+"
+        UNWIND $tools AS toolData
+        MERGE (t:Tool {name: toolData.name})
+        SET t.description = toolData.description,
+            t.schema = toolData.schema,
+            t.updatedAt = datetime()
+      "
+`;

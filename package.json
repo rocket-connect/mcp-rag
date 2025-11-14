@@ -9,6 +9,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
+    "test": "pnpm -r --parallel test",
     "clean": "pnpm -r exec rm -rf dist node_modules",
     "clean:dist": "pnpm -r exec rm -rf dist",
     "typecheck": "pnpm -r typecheck",

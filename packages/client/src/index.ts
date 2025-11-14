@@ -12,7 +12,6 @@ import type {
   GenerateResult,
   StreamOptions,
 } from '@mcp-rag/types'
-import { MigrationHelper } from '@mcp-rag/neo4j'
 
 /**
  * Create a new MCP RAG client
@@ -41,41 +40,15 @@ import { MigrationHelper } from '@mcp-rag/neo4j'
  * ```
  */
 export function createMCPRag(config: MCPRagConfig): MCPRagClient {
-  const { neo4j: driver, tools, maxActiveTools = 10, migration } = config
+  const { tools, maxActiveTools = 10 } = config
 
   // Internal state
-  let migrated = false
   const toolRegistry = new Map(Object.entries(tools))
 
   /**
    * Ensure tools are synced to Neo4j
    */
-  async function ensureMigrated(): Promise<void> {
-    if (migrated) return
-
-    // Check if migration is needed
-    const session = driver.session()
-    try {
-      const needsMigration = migration?.shouldMigrate
-        ? await migration.shouldMigrate(session)
-        : await MigrationHelper.shouldMigrate(session)
-
-      if (needsMigration) {
-        if (migration?.migrate) {
-          await migration.migrate(session, Object.fromEntries(toolRegistry))
-        } else {
-          await MigrationHelper.migrate(
-            session,
-            Object.fromEntries(toolRegistry)
-          )
-        }
-      }
-
-      migrated = true
-    } finally {
-      await session.close()
-    }
-  }
+  async function ensureMigrated(): Promise<void> {}
 
   /**
    * Select active tools based on semantic similarity
@@ -124,7 +97,6 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     },
 
     async sync(): Promise<void> {
-      migrated = false
       await ensureMigrated()
     },
 
@@ -132,7 +104,6 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     addTool(name: string, tool: Tool): void {
       // @ts-ignore
       toolRegistry.set(name, tool)
-      migrated = false // Force re-sync on next call
     },
 
     removeTool(name: string): void {
