@@ -1,38 +1,41 @@
 name: CI
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-    ci:
-        runs-on: ubuntu-latest
+  ci:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            - name: Setup workspace
-              uses: ./.github/actions/setup-workspace
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
 
-            - name: Check formatting
-              run: pnpm format:check
+      - name: Check formatting
+        run: pnpm format:check
 
-            - name: Run linting
-              run: pnpm lint
+      - name: Run linting
+        run: pnpm lint
 
-            - name: Build packages
-              run: pnpm build
+      - name: Build packages
+        run: pnpm build
 
-            - name: Type check
-              run: pnpm typecheck
+      - name: Type check
+        run: pnpm typecheck
 
-            - name: Upload build artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: build-artifacts-${{ github.sha }}
-                  path: |
-                      packages/*/dist
-                  retention-days: 7
+      - name: Test
+        run: pnpm test
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ github.sha }}
+          path: |
+            packages/*/dist
+          retention-days: 7
