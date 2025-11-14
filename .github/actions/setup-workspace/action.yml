@@ -1,15 +1,5 @@
 name: 'Setup Workspace'
-description: 'Setup Node.js, PNPM, and install dependencies with caching'
-
-inputs:
-  node-version:
-    description: 'Node.js version to use'
-    required: false
-    default: '22.14.0'
-  pnpm-version:
-    description: 'PNPM version to use'
-    required: false
-    default: '9.10.0'
+description: 'Setup Node.js, pnpm, and install dependencies'
 
 runs:
   using: 'composite'
@@ -17,21 +7,21 @@ runs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version: '20'
 
-    - name: Setup PNPM
-      uses: pnpm/action-setup@v2
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
       with:
-        version: ${{ inputs.pnpm-version }}
+        version: 9.14.4
 
-    - name: Get PNPM store directory
+    - name: Get pnpm store directory
       id: pnpm-cache
       shell: bash
       run: |
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
-    - name: Setup PNPM cache
-      uses: actions/cache@v3
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}

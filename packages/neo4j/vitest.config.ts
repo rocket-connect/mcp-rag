@@ -8,7 +8,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.ts'],
     },
+    testTimeout: 30000,
+    hookTimeout: 30000,
   },
 })

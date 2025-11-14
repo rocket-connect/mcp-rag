@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CypherBuilder } from '../src/index'
+import { CypherBuilder } from '../../src/index'
 import type { Tool } from 'ai'
 
 describe('Basic Tool Array Unwinding', () => {
@@ -36,12 +36,12 @@ describe('Basic Tool Array Unwinding', () => {
         {
           name: 'test_tool',
           description: 'A test tool',
-          schema: {
+          schema: JSON.stringify({
             type: 'object',
             properties: {
               input: { type: 'string' },
             },
-          },
+          }),
         },
       ],
     })

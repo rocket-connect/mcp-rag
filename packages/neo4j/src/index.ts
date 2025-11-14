@@ -21,7 +21,7 @@ export class CypherBuilder {
         tools: tools.map(({ name, tool }) => ({
           name,
           description: tool.description || '',
-          schema: tool.inputSchema,
+          schema: JSON.stringify(tool.inputSchema), // Serialize to JSON string
         })),
       },
     }
