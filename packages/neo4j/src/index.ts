@@ -24,6 +24,7 @@ export class CypherBuilder {
     tools.forEach((toolInput, index) => {
       const { name, tool, embedding } = toolInput
       const paramPrefix = `tool${index}`
+      const varName = `t${index}` // Use unique variable name for each tool
 
       params[`${paramPrefix}_name`] = name
       params[`${paramPrefix}_description`] = tool.description || ''
@@ -36,18 +37,18 @@ export class CypherBuilder {
 
       // Build the SET clause conditionally based on whether embedding is provided
       const setClause = embedding
-        ? `SET t.name = $${paramPrefix}_name,
-            t.description = $${paramPrefix}_description,
-            t.schema = $${paramPrefix}_schema,
-            t.embedding = $${paramPrefix}_embedding,
-            t.updatedAt = datetime()`
-        : `SET t.name = $${paramPrefix}_name,
-            t.description = $${paramPrefix}_description,
-            t.schema = $${paramPrefix}_schema,
-            t.updatedAt = datetime()`
+        ? `SET ${varName}.name = $${paramPrefix}_name,
+            ${varName}.description = $${paramPrefix}_description,
+            ${varName}.schema = $${paramPrefix}_schema,
+            ${varName}.embedding = $${paramPrefix}_embedding,
+            ${varName}.updatedAt = datetime()`
+        : `SET ${varName}.name = $${paramPrefix}_name,
+            ${varName}.description = $${paramPrefix}_description,
+            ${varName}.schema = $${paramPrefix}_schema,
+            ${varName}.updatedAt = datetime()`
 
       statements.push(`
-      MERGE (t:Tool {name: $${paramPrefix}_name})
+      MERGE (${varName}:Tool {name: $${paramPrefix}_name})
       ${setClause}`)
     })
 

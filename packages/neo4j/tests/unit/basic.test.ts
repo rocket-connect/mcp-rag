@@ -36,7 +36,11 @@ describe('CypherBuilder', () => {
       const result = CypherBuilder.createTools(tools)
       expect(result.cypher).toMatchSnapshot()
 
-      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('SET t0.name = $tool0_name')
+      expect(result.cypher).toContain('MERGE (t1:Tool {name: $tool1_name})')
+      expect(result.cypher).toContain('SET t1.name = $tool1_name')
+
       expect(result.params).toEqual({
         tool0_name: 'tool1',
         tool0_description: 'First tool',
@@ -90,8 +94,12 @@ describe('CypherBuilder', () => {
       const result = CypherBuilder.createTools(tools)
       expect(result.cypher).toMatchSnapshot()
 
-      expect(result.cypher).toContain('t.embedding = $tool0_embedding')
-      expect(result.cypher).toContain('t.embedding = $tool1_embedding')
+      // Verify unique variable names with embeddings (t0, t1)
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('t0.embedding = $tool0_embedding')
+      expect(result.cypher).toContain('MERGE (t1:Tool {name: $tool1_name})')
+      expect(result.cypher).toContain('t1.embedding = $tool1_embedding')
+
       expect(result.params).toEqual({
         tool0_name: 'tool1',
         tool0_description: 'First tool',
@@ -135,8 +143,12 @@ describe('CypherBuilder', () => {
       const result = CypherBuilder.createTools(tools)
       expect(result.cypher).toMatchSnapshot()
 
-      expect(result.cypher).toContain('t.embedding = $tool0_embedding')
-      expect(result.cypher).not.toContain('t.embedding = $tool1_embedding')
+      // Verify unique variable names with mixed embeddings (t0 has embedding, t1 doesn't)
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('t0.embedding = $tool0_embedding')
+      expect(result.cypher).toContain('MERGE (t1:Tool {name: $tool1_name})')
+      expect(result.cypher).not.toContain('t1.embedding = $tool1_embedding')
+
       expect(result.params).toEqual({
         tool0_name: 'tool1',
         tool0_description: 'First tool with embedding',
@@ -169,12 +181,42 @@ describe('CypherBuilder', () => {
       // @ts-ignore
       const result = CypherBuilder.createTools(tools)
 
-      expect(result.cypher).toContain('MERGE (t:Tool {name: $tool0_name})')
+      // Verify it uses t0 for the first (and only) tool
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('SET t0.name = $tool0_name')
       expect(result.params).toEqual({
         tool0_name: 'minimal_tool',
         tool0_description: '',
         tool0_schema: '{}',
       })
+    })
+
+    it('should generate unique variables for 3+ tools', () => {
+      const tools = [
+        {
+          name: 'tool1',
+          tool: { description: 'First' },
+        },
+        {
+          name: 'tool2',
+          tool: { description: 'Second' },
+        },
+        {
+          name: 'tool3',
+          tool: { description: 'Third' },
+        },
+      ]
+
+      // @ts-ignore
+      const result = CypherBuilder.createTools(tools)
+
+      // Verify all three get unique variable names
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('MERGE (t1:Tool {name: $tool1_name})')
+      expect(result.cypher).toContain('MERGE (t2:Tool {name: $tool2_name})')
+      expect(result.cypher).toContain('SET t0.name = $tool0_name')
+      expect(result.cypher).toContain('SET t1.name = $tool1_name')
+      expect(result.cypher).toContain('SET t2.name = $tool2_name')
     })
   })
 
@@ -191,8 +233,10 @@ describe('CypherBuilder', () => {
         },
       })
 
-      expect(result.cypher).toContain('MERGE (t:Tool {name: $tool0_name})')
-      expect(result.cypher).not.toContain('t.embedding')
+      // Single tool should use t0
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('SET t0.name = $tool0_name')
+      expect(result.cypher).not.toContain('t0.embedding')
       expect(result.params).toEqual({
         tool0_name: 'single_tool',
         tool0_description: 'A single tool',
@@ -221,8 +265,9 @@ describe('CypherBuilder', () => {
         mockEmbedding
       )
 
-      expect(result.cypher).toContain('MERGE (t:Tool {name: $tool0_name})')
-      expect(result.cypher).toContain('t.embedding = $tool0_embedding')
+      // Single tool with embedding should use t0
+      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      expect(result.cypher).toContain('t0.embedding = $tool0_embedding')
       expect(result.params).toEqual({
         tool0_name: 'single_tool',
         tool0_description: 'A single tool',

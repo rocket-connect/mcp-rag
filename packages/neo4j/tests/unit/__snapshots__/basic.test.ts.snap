@@ -2,63 +2,48 @@
 
 exports[`CypherBuilder > createTools > should generate cypher for mixed tools with and without embeddings 1`] = `
 "
-      MERGE (t:Tool {name: $tool0_name})
-      SET t.name = $tool0_name,
-            t.description = $tool0_description,
-            t.schema = $tool0_schema,
-            t.embedding = $tool0_embedding,
-            t.updatedAt = datetime()
+      MERGE (t0:Tool {name: $tool0_name})
+      SET t0.name = $tool0_name,
+            t0.description = $tool0_description,
+            t0.schema = $tool0_schema,
+            t0.embedding = $tool0_embedding,
+            t0.updatedAt = datetime()
 
-      MERGE (t:Tool {name: $tool1_name})
-      SET t.name = $tool1_name,
-            t.description = $tool1_description,
-            t.schema = $tool1_schema,
-            t.updatedAt = datetime()"
+      MERGE (t1:Tool {name: $tool1_name})
+      SET t1.name = $tool1_name,
+            t1.description = $tool1_description,
+            t1.schema = $tool1_schema,
+            t1.updatedAt = datetime()"
 `;
 
 exports[`CypherBuilder > createTools > should generate cypher for multiple tools without embeddings 1`] = `
 "
-      MERGE (t:Tool {name: $tool0_name})
-      SET t.name = $tool0_name,
-            t.description = $tool0_description,
-            t.schema = $tool0_schema,
-            t.updatedAt = datetime()
+      MERGE (t0:Tool {name: $tool0_name})
+      SET t0.name = $tool0_name,
+            t0.description = $tool0_description,
+            t0.schema = $tool0_schema,
+            t0.updatedAt = datetime()
 
-      MERGE (t:Tool {name: $tool1_name})
-      SET t.name = $tool1_name,
-            t.description = $tool1_description,
-            t.schema = $tool1_schema,
-            t.updatedAt = datetime()"
-`;
-
-exports[`CypherBuilder > createTools > should generate cypher for multiple tools without embeddings 2`] = `
-"
-      MERGE (t:Tool {name: $tool0_name})
-      SET t.name = $tool0_name,
-            t.description = $tool0_description,
-            t.schema = $tool0_schema,
-            t.updatedAt = datetime()
-
-      MERGE (t:Tool {name: $tool1_name})
-      SET t.name = $tool1_name,
-            t.description = $tool1_description,
-            t.schema = $tool1_schema,
-            t.updatedAt = datetime()"
+      MERGE (t1:Tool {name: $tool1_name})
+      SET t1.name = $tool1_name,
+            t1.description = $tool1_description,
+            t1.schema = $tool1_schema,
+            t1.updatedAt = datetime()"
 `;
 
 exports[`CypherBuilder > createTools > should generate cypher for tools with embeddings 1`] = `
 "
-      MERGE (t:Tool {name: $tool0_name})
-      SET t.name = $tool0_name,
-            t.description = $tool0_description,
-            t.schema = $tool0_schema,
-            t.embedding = $tool0_embedding,
-            t.updatedAt = datetime()
+      MERGE (t0:Tool {name: $tool0_name})
+      SET t0.name = $tool0_name,
+            t0.description = $tool0_description,
+            t0.schema = $tool0_schema,
+            t0.embedding = $tool0_embedding,
+            t0.updatedAt = datetime()
 
-      MERGE (t:Tool {name: $tool1_name})
-      SET t.name = $tool1_name,
-            t.description = $tool1_description,
-            t.schema = $tool1_schema,
-            t.embedding = $tool1_embedding,
-            t.updatedAt = datetime()"
+      MERGE (t1:Tool {name: $tool1_name})
+      SET t1.name = $tool1_name,
+            t1.description = $tool1_description,
+            t1.schema = $tool1_schema,
+            t1.embedding = $tool1_embedding,
+            t1.updatedAt = datetime()"
 `;
