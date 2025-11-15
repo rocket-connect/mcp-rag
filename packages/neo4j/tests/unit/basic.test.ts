@@ -119,22 +119,22 @@ describe('CypherBuilder', () => {
     })
 
     it('should generate cypher for mixed tools with and without embeddings', () => {
-      const mockEmbedding = [0.1, 0.2, 0.3]
+      const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5]
 
       const tools = [
         {
           name: 'tool1',
           tool: {
-            description: 'First tool with embedding',
-            inputSchema: { type: 'object' },
+            description: 'First tool',
+            inputSchema: { type: 'object', properties: {} },
           },
           embedding: mockEmbedding,
         },
         {
           name: 'tool2',
           tool: {
-            description: 'Second tool without embedding',
-            inputSchema: { type: 'object' },
+            description: 'Second tool',
+            inputSchema: { type: 'object', properties: {} },
           },
         },
       ]
@@ -143,169 +143,208 @@ describe('CypherBuilder', () => {
       const result = CypherBuilder.createTools(tools)
       expect(result.cypher).toMatchSnapshot()
 
-      // Verify unique variable names with mixed embeddings (t0 has embedding, t1 doesn't)
-      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
+      // Tool1 should have embedding
       expect(result.cypher).toContain('t0.embedding = $tool0_embedding')
-      expect(result.cypher).toContain('MERGE (t1:Tool {name: $tool1_name})')
-      expect(result.cypher).not.toContain('t1.embedding = $tool1_embedding')
+      // Tool2 should NOT have embedding
+      expect(result.cypher).not.toContain('t1.embedding')
 
-      expect(result.params).toEqual({
-        tool0_name: 'tool1',
-        tool0_description: 'First tool with embedding',
-        tool0_schema: JSON.stringify({ type: 'object' }),
-        tool0_embedding: mockEmbedding,
-        tool1_name: 'tool2',
-        tool1_description: 'Second tool without embedding',
-        tool1_schema: JSON.stringify({ type: 'object' }),
-      })
-    })
-
-    it('should handle empty tools array', () => {
-      // @ts-ignore
-      const result = CypherBuilder.createTools([])
-
-      expect(result.cypher).toBe('')
-      expect(result.params).toEqual({})
-    })
-
-    it('should handle tools with minimal properties', () => {
-      const tools = [
-        {
-          name: 'minimal_tool',
-          tool: {
-            description: '',
-          },
-        },
-      ]
-
-      // @ts-ignore
-      const result = CypherBuilder.createTools(tools)
-
-      // Verify it uses t0 for the first (and only) tool
-      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
-      expect(result.cypher).toContain('SET t0.name = $tool0_name')
-      expect(result.params).toEqual({
-        tool0_name: 'minimal_tool',
-        tool0_description: '',
-        tool0_schema: '{}',
-      })
-    })
-
-    it('should generate unique variables for 3+ tools', () => {
-      const tools = [
-        {
-          name: 'tool1',
-          tool: { description: 'First' },
-        },
-        {
-          name: 'tool2',
-          tool: { description: 'Second' },
-        },
-        {
-          name: 'tool3',
-          tool: { description: 'Third' },
-        },
-      ]
-
-      // @ts-ignore
-      const result = CypherBuilder.createTools(tools)
-
-      // Verify all three get unique variable names
-      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
-      expect(result.cypher).toContain('MERGE (t1:Tool {name: $tool1_name})')
-      expect(result.cypher).toContain('MERGE (t2:Tool {name: $tool2_name})')
-      expect(result.cypher).toContain('SET t0.name = $tool0_name')
-      expect(result.cypher).toContain('SET t1.name = $tool1_name')
-      expect(result.cypher).toContain('SET t2.name = $tool2_name')
+      expect(result.params.tool0_embedding).toEqual(mockEmbedding)
+      expect(result.params.tool1_embedding).toBeUndefined()
     })
   })
 
-  describe('createTool', () => {
-    it('should generate cypher for a single tool without embedding', () => {
-      const result = CypherBuilder.createTool('single_tool', {
-        description: 'A single tool',
-        inputSchema: {
-          // @ts-ignore
-          type: 'object',
-          properties: {
-            input: { type: 'string' },
-          },
-        },
+  describe('vectorSearch', () => {
+    const mockVector = [0.1, 0.2, 0.3, 0.4, 0.5]
+
+    it('should generate basic vector search query', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
       })
 
-      // Single tool should use t0
-      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
-      expect(result.cypher).toContain('SET t0.name = $tool0_name')
-      expect(result.cypher).not.toContain('t0.embedding')
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain(
+        'CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)'
+      )
+      expect(result.cypher).toContain('YIELD node, score')
+      expect(result.cypher).toContain('RETURN node.name AS name')
+      expect(result.cypher).toContain('ORDER BY score DESC')
+
       expect(result.params).toEqual({
-        tool0_name: 'single_tool',
-        tool0_description: 'A single tool',
-        tool0_schema: JSON.stringify({
-          type: 'object',
-          properties: { input: { type: 'string' } },
-        }),
+        queryVector: mockVector,
+        limit: 10,
+        indexName: 'tool_embeddings',
       })
     })
 
-    it('should generate cypher for a single tool with embedding', () => {
-      const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5]
+    it('should generate vector search with custom limit', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        limit: 5,
+      })
 
-      const result = CypherBuilder.createTool(
-        'single_tool',
-        {
-          description: 'A single tool',
-          inputSchema: {
-            // @ts-ignore
-            type: 'object',
-            properties: {
-              input: { type: 'string' },
-            },
-          },
-        },
-        mockEmbedding
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.params.limit).toBe(5)
+    })
+
+    it('should generate vector search with custom index name', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        indexName: 'custom_index',
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.params.indexName).toBe('custom_index')
+    })
+
+    it('should generate vector search filtered by IDs', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        filterByIds: ['id1', 'id2', 'id3'],
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('WHERE node.id IN $filterIds')
+      expect(result.params.filterIds).toEqual(['id1', 'id2', 'id3'])
+    })
+
+    it('should generate vector search filtered by names', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        filterByNames: ['tool1', 'tool2'],
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('WHERE node.name IN $filterNames')
+      expect(result.params.filterNames).toEqual(['tool1', 'tool2'])
+    })
+
+    it('should generate vector search with minimum score filter', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        minScore: 0.8,
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('WHERE score >= $minScore')
+      expect(result.params.minScore).toBe(0.8)
+    })
+
+    it('should generate vector search with multiple filters', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        limit: 20,
+        filterByIds: ['id1', 'id2'],
+        filterByNames: ['tool1', 'tool2', 'tool3'],
+        minScore: 0.75,
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain(
+        'WHERE node.id IN $filterIds AND node.name IN $filterNames AND score >= $minScore'
       )
-
-      // Single tool with embedding should use t0
-      expect(result.cypher).toContain('MERGE (t0:Tool {name: $tool0_name})')
-      expect(result.cypher).toContain('t0.embedding = $tool0_embedding')
       expect(result.params).toEqual({
-        tool0_name: 'single_tool',
-        tool0_description: 'A single tool',
-        tool0_schema: JSON.stringify({
-          type: 'object',
-          properties: { input: { type: 'string' } },
-        }),
-        tool0_embedding: mockEmbedding,
+        queryVector: mockVector,
+        limit: 20,
+        indexName: 'tool_embeddings',
+        filterIds: ['id1', 'id2'],
+        filterNames: ['tool1', 'tool2', 'tool3'],
+        minScore: 0.75,
       })
     })
 
-    it('should generate same result as createTools for single tool', () => {
-      const mockEmbedding = [0.1, 0.2, 0.3]
+    it('should generate vector search with ID and score filters only', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        filterByIds: ['id1'],
+        minScore: 0.9,
+      })
 
-      const singleResult = CypherBuilder.createTool(
-        'test_tool',
-        {
-          description: 'Test tool',
-          // @ts-ignore
-          inputSchema: { type: 'object' },
-        },
-        mockEmbedding
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain(
+        'WHERE node.id IN $filterIds AND score >= $minScore'
+      )
+      expect(result.params.filterNames).toBeUndefined()
+    })
+
+    it('should generate vector search with name and score filters only', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        filterByNames: ['tool1'],
+        minScore: 0.85,
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain(
+        'WHERE node.name IN $filterNames AND score >= $minScore'
+      )
+      expect(result.params.filterIds).toBeUndefined()
+    })
+
+    it('should handle empty filter arrays gracefully', () => {
+      const result = CypherBuilder.vectorSearch({
+        vector: mockVector,
+        filterByIds: [],
+        filterByNames: [],
+      })
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).not.toContain('WHERE')
+      expect(result.params.filterIds).toBeUndefined()
+      expect(result.params.filterNames).toBeUndefined()
+    })
+  })
+
+  describe('createVectorIndex', () => {
+    it('should generate cypher to create vector index with cosine similarity', () => {
+      const result = CypherBuilder.createVectorIndex('tool_embeddings', 1536)
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('CREATE VECTOR INDEX tool_embeddings')
+      expect(result.cypher).toContain('IF NOT EXISTS')
+      expect(result.cypher).toContain('FOR (t:Tool)')
+      expect(result.cypher).toContain('ON t.embedding')
+      expect(result.cypher).toContain('`vector.dimensions`: $dimensions')
+      expect(result.cypher).toContain(
+        "`vector.similarity_function`: 'cosine'"
       )
 
-      const multiResult = CypherBuilder.createTools([
-        {
-          name: 'test_tool',
-          tool: {
-            description: 'Test tool',
-            // @ts-ignore
-            inputSchema: { type: 'object' },
-          },
-          embedding: mockEmbedding,
-        },
-      ])
+      expect(result.params).toEqual({
+        dimensions: 1536,
+      })
+    })
 
-      expect(singleResult.cypher).toBe(multiResult.cypher)
-      expect(singleResult.params).toEqual(multiResult.params)
+    it('should generate cypher to create vector index with euclidean similarity', () => {
+      const result = CypherBuilder.createVectorIndex(
+        'tool_embeddings',
+        768,
+      )
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.params).toEqual({
+        dimensions: 768,
+      })
+    })
+
+    it('should generate cypher to create vector index with custom name', () => {
+      const result = CypherBuilder.createVectorIndex('my_custom_index', 256)
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('CREATE VECTOR INDEX my_custom_index')
+    })
+  })
+
+  describe('checkVectorIndex', () => {
+    it('should generate cypher to check vector index status', () => {
+      const result = CypherBuilder.checkVectorIndex('tool_embeddings')
+
+      expect(result.cypher).toMatchSnapshot()
+      expect(result.cypher).toContain('SHOW VECTOR INDEXES')
+      expect(result.cypher).toContain('WHERE name = $indexName')
+      expect(result.cypher).toContain('RETURN name, state, type')
+
+      expect(result.params).toEqual({
+        indexName: 'tool_embeddings',
+      })
     })
   })
 })

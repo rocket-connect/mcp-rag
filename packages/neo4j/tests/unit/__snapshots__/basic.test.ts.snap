@@ -1,5 +1,11 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`CypherBuilder > checkVectorIndex > should generate cypher to check vector index status 1`] = `
+"SHOW VECTOR INDEXES
+WHERE name = $indexName
+RETURN name, state, type"
+`;
+
 exports[`CypherBuilder > createTools > should generate cypher for mixed tools with and without embeddings 1`] = `
 "
       MERGE (t0:Tool {name: $tool0_name})
@@ -46,4 +52,150 @@ exports[`CypherBuilder > createTools > should generate cypher for tools with emb
             t1.schema = $tool1_schema,
             t1.embedding = $tool1_embedding,
             t1.updatedAt = datetime()"
+`;
+
+exports[`CypherBuilder > createVectorIndex > should generate cypher to create vector index with cosine similarity 1`] = `
+"CREATE VECTOR INDEX tool_embeddings IF NOT EXISTS
+FOR (t:Tool)
+ON t.embedding
+OPTIONS {
+  indexConfig: {
+    \`vector.dimensions\`: $dimensions,
+    \`vector.similarity_function\`: 'cosine'
+  }
+}"
+`;
+
+exports[`CypherBuilder > createVectorIndex > should generate cypher to create vector index with custom name 1`] = `
+"CREATE VECTOR INDEX my_custom_index IF NOT EXISTS
+FOR (t:Tool)
+ON t.embedding
+OPTIONS {
+  indexConfig: {
+    \`vector.dimensions\`: $dimensions,
+    \`vector.similarity_function\`: 'cosine'
+  }
+}"
+`;
+
+exports[`CypherBuilder > createVectorIndex > should generate cypher to create vector index with euclidean similarity 1`] = `
+"CREATE VECTOR INDEX tool_embeddings IF NOT EXISTS
+FOR (t:Tool)
+ON t.embedding
+OPTIONS {
+  indexConfig: {
+    \`vector.dimensions\`: $dimensions,
+    \`vector.similarity_function\`: 'cosine'
+  }
+}"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate basic vector search query 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search filtered by IDs 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+WHERE node.id IN $filterIds
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search filtered by names 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+WHERE node.name IN $filterNames
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search with ID and score filters only 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+WHERE node.id IN $filterIds AND score >= $minScore
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search with custom index name 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search with custom limit 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search with minimum score filter 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+WHERE score >= $minScore
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search with multiple filters 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+WHERE node.id IN $filterIds AND node.name IN $filterNames AND score >= $minScore
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should generate vector search with name and score filters only 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+WHERE node.name IN $filterNames AND score >= $minScore
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
+`;
+
+exports[`CypherBuilder > vectorSearch > should handle empty filter arrays gracefully 1`] = `
+"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node, score
+
+RETURN node.name AS name,
+       node.description AS description,
+       node.schema AS schema,
+       score
+ORDER BY score DESC"
 `;
