@@ -8,10 +8,12 @@ import type { Tool } from 'ai'
 import type {
   MCPRagConfig,
   MCPRagClient,
-  GenerateOptions,
-  GenerateResult,
+  GenerateTextOptions,
+  GenerateTextResultWrapper,
   StreamOptions,
-} from '@mcp-rag/types'
+  GenerateTextParams,
+  GenerateTextResult,
+} from './types'
 
 /**
  * Create a new MCP RAG client
@@ -48,7 +50,9 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   /**
    * Ensure tools are synced to Neo4j
    */
-  async function ensureMigrated(): Promise<void> {}
+  async function ensureMigrated(): Promise<void> {
+    // TODO: Implement migration logic
+  }
 
   /**
    * Select active tools based on semantic similarity
@@ -63,10 +67,12 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   }
 
   return {
-    async generate(options: GenerateOptions): Promise<GenerateResult> {
+    async generateText(
+      options: GenerateTextOptions
+    ): Promise<GenerateTextResultWrapper> {
       await ensureMigrated()
 
-      const { prompt, activeTools } = options
+      const { prompt, activeTools, metadata, ...restOptions } = options
 
       // Determine which tools to use
       const selectedTools = activeTools
@@ -77,14 +83,27 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       const activeToolSet: Record<string, Tool> = {}
       for (const name of selectedTools) {
         const tool = toolRegistry.get(name)
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        if (tool) activeToolSet[name] = tool
+        if (tool) {
+          activeToolSet[name] = tool
+        }
       }
 
-      // TODO: Implement actual generation logic with AI SDK
-      // This is a placeholder
-      throw new Error('Generation logic to be implemented')
+      // Use AI SDK's generateText with proper typing
+      const { generateText } = await import('ai')
+
+      // Construct params that match AI SDK's expected type
+      const generateParams: GenerateTextParams = {
+        model: config.model,
+        prompt,
+        tools: activeToolSet,
+        ...restOptions,
+      }
+
+      const result: GenerateTextResult = await generateText(generateParams)
+
+      return {
+        result: result,
+      }
     },
 
     // eslint-disable-next-line require-yield
@@ -100,9 +119,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       await ensureMigrated()
     },
 
-    // @ts-ignore
     addTool(name: string, tool: Tool): void {
-      // @ts-ignore
       toolRegistry.set(name, tool)
     },
 
@@ -110,21 +127,8 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       toolRegistry.delete(name)
     },
 
-    // @ts-ignore
-
     getTools(): Record<string, Tool> {
-      // @ts-ignore
-
       return Object.fromEntries(toolRegistry)
     },
   }
 }
-
-// Re-export types for convenience
-export type {
-  MCPRagConfig,
-  MCPRagClient,
-  GenerateOptions,
-  GenerateResult,
-  StreamOptions,
-} from '@mcp-rag/types'

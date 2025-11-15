@@ -19,19 +19,24 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'no tests'"
+    "test": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration/** --config ./vitest.integration.config.ts"
   },
   "peerDependencies": {
     "ai": ">=5.0.0",
     "neo4j-driver": ">6.0.0"
   },
   "dependencies": {
-    "@mcp-rag/types": "workspace:*",
-    "@mcp-rag/neo4j": "workspace:*"
+    "@mcp-rag/neo4j": "workspace:*",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@ai-sdk/openai": "^2.0.65",
+    "@types/node": "^20.0.0",
     "ai": "^5.0.93",
-    "neo4j-driver": "^6.0.1"
+    "neo4j-driver": "^6.0.1",
+    "vitest": "^4.0.9"
   },
   "keywords": [
     "ai",

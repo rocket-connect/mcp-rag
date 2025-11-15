@@ -38,16 +38,25 @@ importers:
       '@mcp-rag/neo4j':
         specifier: workspace:*
         version: link:../neo4j
-      '@mcp-rag/types':
-        specifier: workspace:*
-        version: link:../types
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
     devDependencies:
+      '@ai-sdk/openai':
+        specifier: ^2.0.65
+        version: 2.0.65(zod@4.1.12)
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.25
       ai:
         specifier: ^5.0.93
         version: 5.0.93(zod@4.1.12)
       neo4j-driver:
         specifier: ^6.0.1
         version: 6.0.1
+      vitest:
+        specifier: ^4.0.9
+        version: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)
 
   packages/neo4j:
     devDependencies:
@@ -118,6 +127,12 @@ packages:
 
   '@ai-sdk/gateway@2.0.9':
     resolution: {integrity: sha512-E6x4h5CPPPJ0za1r5HsLtHbeI+Tp3H+YFtcH8G3dSSPFE6w+PZINzB4NxLZmg1QqSeA5HTP3ZEzzsohp0o2GEw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai@2.0.65':
+    resolution: {integrity: sha512-Wqo4iNCsxUYJFmEAzAHO0XDnnS76rqvPRX2AUhEAOX3cgL9UEfouFmiNQS2jM9AZhMdWj5GIG41hgr4YOr20tA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1970,6 +1985,12 @@ snapshots:
       '@ai-sdk/provider': 2.0.0
       '@ai-sdk/provider-utils': 3.0.17(zod@4.1.12)
       '@vercel/oidc': 3.0.3
+      zod: 4.1.12
+
+  '@ai-sdk/openai@2.0.65(zod@4.1.12)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.17(zod@4.1.12)
       zod: 4.1.12
 
   '@ai-sdk/provider-utils@3.0.17(zod@4.1.12)':
