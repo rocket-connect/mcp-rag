@@ -4,7 +4,7 @@ import { describe, it, expect, afterAll } from 'vitest'
 import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { tool, jsonSchema, type CoreMessage } from 'ai'
-import mockToolsJson from '../../mocks/mock-tools-github.json'
+import mockToolsJson from '../mock-tools-github.json'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 

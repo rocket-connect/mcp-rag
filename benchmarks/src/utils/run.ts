@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { generateMarkdownReport, saveReport } from '../reporting/markdown.js'
+import { generateMarkdownReport, saveReport } from './markdown.js'
 
 async function main() {
   console.log('🚀 Running benchmarks in development mode...\n')

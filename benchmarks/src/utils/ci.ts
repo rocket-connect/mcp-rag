@@ -7,7 +7,7 @@ import {
   saveReport,
   saveHistoricalReport,
   BenchmarkResult,
-} from '../reporting/markdown.js'
+} from './markdown.js'
 
 function getGitInfo() {
   try {
