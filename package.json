@@ -19,7 +19,9 @@
     "lint": "eslint packages --ext .ts,.tsx",
     "lint:fix": "eslint packages --ext .ts,.tsx --fix",
     "format": "prettier --write \"packages/**/*.{ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"packages/**/*.{ts,tsx,json,md}\""
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,json,md}\"",
+    "benchmark": "pnpm --filter @mcp-rag/benchmarks benchmark",
+    "benchmark:ci": "pnpm --filter @mcp-rag/benchmarks benchmark:ci"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
