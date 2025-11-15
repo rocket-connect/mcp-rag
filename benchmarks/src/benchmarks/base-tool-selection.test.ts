@@ -32,7 +32,12 @@ interface RequestMetrics {
 interface BenchmarkSummary {
   totalTests: number
   successfulTests: number
+  failedTests?: number
+  minResponseTime: number
+  maxResponseTime: number
   totalResponseTime: number
+  minTokens: number
+  maxTokens: number
   averageResponseTime: number
   totalTokens: number
   averageTokens: number
@@ -120,7 +125,14 @@ function convertMCPToolsToAISDK(mcpTools: MCPTool[]): Record<string, any> {
 }
 
 /**
- * Generate benchmark summary statistics
+ * FIXED VERSION: Generate benchmark summary statistics
+ *
+ * This function now includes all required fields that the markdown reporter expects:
+ * - failedTests
+ * - minResponseTime
+ * - maxResponseTime
+ * - minTokens
+ * - maxTokens
  */
 function generateBenchmarkSummary(metrics: RequestMetrics[]): BenchmarkSummary {
   const totalResponseTime = metrics.reduce((sum, m) => sum + m.responseTime, 0)
@@ -135,10 +147,15 @@ function generateBenchmarkSummary(metrics: RequestMetrics[]): BenchmarkSummary {
   return {
     totalTests: metrics.length,
     successfulTests: successfulToolCalls,
+    failedTests: metrics.length - successfulToolCalls, // ✅ ADDED
     totalResponseTime,
     averageResponseTime: Math.round(totalResponseTime / metrics.length),
+    minResponseTime: Math.min(...metrics.map(m => m.responseTime)), // ✅ ADDED
+    maxResponseTime: Math.max(...metrics.map(m => m.responseTime)), // ✅ ADDED
     totalTokens,
     averageTokens: Math.round(totalTokens / metrics.length),
+    minTokens: Math.min(...metrics.map(m => m.tokenCount)), // ✅ ADDED
+    maxTokens: Math.max(...metrics.map(m => m.tokenCount)), // ✅ ADDED
     totalPromptTokens,
     totalCompletionTokens,
     toolCallSuccessRate: (successfulToolCalls / metrics.length) * 100,
@@ -206,7 +223,8 @@ function printBenchmarkSummary(summary: BenchmarkSummary): void {
 function exportBenchmarkSummary(summary: BenchmarkSummary): void {
   if (process.env.CI || process.env.BENCHMARK_EXPORT) {
     try {
-      const resultsDir = join(process.cwd(), 'results')
+      const benchmarkName = 'base-tool-selection'
+      const resultsDir = join(process.cwd(), 'results', benchmarkName)
       mkdirSync(resultsDir, { recursive: true })
 
       const summaryPath = join(resultsDir, 'benchmark-summary.json')

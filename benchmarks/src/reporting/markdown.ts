@@ -1,6 +1,35 @@
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
+export interface BenchmarkMetric {
+  promptNumber: number
+  toolCalled: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  cumulativeTokens: number
+  responseTime: number
+  conversationLength: number
+}
+
+export interface BenchmarkSummary {
+  totalTests: number
+  successfulTests: number
+  failedTests: number
+  totalResponseTime: number
+  averageResponseTime: number
+  minResponseTime: number
+  maxResponseTime: number
+  totalTokens: number
+  totalPromptTokens: number
+  totalCompletionTokens: number
+  averageTokens: number
+  minTokens: number
+  maxTokens: number
+  toolCallSuccessRate: number
+  metrics?: BenchmarkMetric[]
+}
+
 export interface BenchmarkResult {
   timestamp: string
   commit?: string
@@ -8,128 +37,127 @@ export interface BenchmarkResult {
   summary?: BenchmarkSummary
 }
 
-export interface BenchmarkSummary {
-  totalTests: number
-  successfulTests: number
-  totalResponseTime: number
-  averageResponseTime: number
-  totalTokens: number
-  averageTokens: number
-  toolCallSuccessRate: number
-  metrics: RequestMetric[]
-}
-
-export interface RequestMetric {
-  promptNumber: number
-  prompt: string
-  toolCalled: string | null
-  tokenCount: number
-  responseTime: number
-  conversationLength: number
-}
-
 export function generateMarkdownReport(result: BenchmarkResult): string {
   const sections: string[] = []
 
   // Header
-  sections.push('# MCP-RAG Benchmark Results')
+  sections.push('# 🚀 MCP-RAG Benchmark Report')
   sections.push('')
-  sections.push(`**Generated**: ${new Date(result.timestamp).toLocaleString()}`)
+  sections.push(`**Generated:** ${new Date(result.timestamp).toLocaleString()}`)
 
-  if (result.commit) {
-    sections.push(`**Commit**: \`${result.commit}\``)
-  }
-
-  if (result.branch) {
-    sections.push(`**Branch**: \`${result.branch}\``)
+  if (result.commit || result.branch) {
+    sections.push('')
+    sections.push('## 📍 Git Information')
+    sections.push('')
+    if (result.commit) sections.push(`- **Commit:** \`${result.commit}\``)
+    if (result.branch) sections.push(`- **Branch:** \`${result.branch}\``)
   }
 
   sections.push('')
 
   // Summary section
-  if (result.summary) {
+  const summary = result.summary
+  if (summary) {
     sections.push('## 📊 Summary')
     sections.push('')
-    sections.push('| Metric | Value |')
-    sections.push('|--------|-------|')
-    sections.push(`| **Total Tests** | ${result.summary.totalTests} |`)
+    sections.push(`- **Total Tests:** ${summary.totalTests}`)
     sections.push(
-      `| **Successful Tool Calls** | ${result.summary.successfulTests}/${result.summary.totalTests} |`
+      `- **Successful Tests:** ${summary.successfulTests} (${summary.toolCallSuccessRate.toFixed(1)}%)`
     )
-    sections.push(
-      `| **Success Rate** | ${result.summary.toolCallSuccessRate.toFixed(1)}% |`
-    )
-    sections.push(
-      `| **Total Response Time** | ${result.summary.totalResponseTime}ms |`
-    )
-    sections.push(
-      `| **Avg Response Time** | ${result.summary.averageResponseTime}ms |`
-    )
-    sections.push(`| **Total Tokens** | ${result.summary.totalTokens} |`)
-    sections.push(`| **Avg Tokens** | ${result.summary.averageTokens} |`)
+    sections.push(`- **Failed Tests:** ${summary.failedTests || 0}`)
     sections.push('')
 
     // Performance metrics
-    const responseTimes = result.summary.metrics.map(m => m.responseTime)
-    const tokenCounts = result.summary.metrics.map(m => m.tokenCount)
-
-    sections.push('### Performance Breakdown')
-    sections.push('')
-    sections.push('**Response Times:**')
-    sections.push(`- Min: ${Math.min(...responseTimes)}ms`)
-    sections.push(`- Max: ${Math.max(...responseTimes)}ms`)
-    sections.push(`- Avg: ${result.summary.averageResponseTime}ms`)
-    sections.push('')
-    sections.push('**Token Usage:**')
-    sections.push(`- Min: ${Math.min(...tokenCounts)} tokens`)
-    sections.push(`- Max: ${Math.max(...tokenCounts)} tokens`)
-    sections.push(`- Avg: ${result.summary.averageTokens} tokens`)
-    sections.push('')
-
-    // Detailed metrics table
-    sections.push('## 📋 Detailed Results')
+    sections.push('## ⚡ Performance')
     sections.push('')
     sections.push(
-      '| # | Tool Called | Tokens | Response Time | Messages | Prompt |'
+      `- **Total Response Time:** ${summary.totalResponseTime?.toLocaleString() || 'N/A'}ms`
     )
     sections.push(
-      '|---|-------------|--------|---------------|----------|--------|'
+      `- **Average Response Time:** ${summary.averageResponseTime ? Math.round(summary.averageResponseTime).toLocaleString() : 'N/A'}ms`
     )
+    sections.push(
+      `- **Min Response Time:** ${summary.minResponseTime?.toLocaleString() || 'N/A'}ms`
+    )
+    sections.push(
+      `- **Max Response Time:** ${summary.maxResponseTime?.toLocaleString() || 'N/A'}ms`
+    )
+    sections.push('')
 
-    result.summary.metrics.forEach(m => {
-      const toolName = m.toolCalled || 'None'
-      const promptPreview =
-        m.prompt.length > 50 ? m.prompt.substring(0, 47) + '...' : m.prompt
+    // Token usage
+    sections.push('## 🔢 Token Usage')
+    sections.push('')
+    sections.push(
+      `- **Total Tokens:** ${summary.totalTokens?.toLocaleString() || 'N/A'}`
+    )
+    sections.push(
+      `- **Prompt Tokens:** ${summary.totalPromptTokens?.toLocaleString() || 'N/A'}`
+    )
+    sections.push(
+      `- **Completion Tokens:** ${summary.totalCompletionTokens?.toLocaleString() || 'N/A'}`
+    )
+    sections.push(
+      `- **Average Tokens per Test:** ${summary.averageTokens ? Math.round(summary.averageTokens).toLocaleString() : 'N/A'}`
+    )
+    sections.push(
+      `- **Min Tokens:** ${summary.minTokens?.toLocaleString() || 'N/A'}`
+    )
+    sections.push(
+      `- **Max Tokens:** ${summary.maxTokens?.toLocaleString() || 'N/A'}`
+    )
+    sections.push('')
 
+    // Detailed metrics table (if available)
+    if (
+      summary.metrics &&
+      Array.isArray(summary.metrics) &&
+      summary.metrics.length > 0
+    ) {
+      sections.push('## 📈 Detailed Metrics')
+      sections.push('')
       sections.push(
-        `| ${m.promptNumber} | ${toolName} | ${m.tokenCount} | ${m.responseTime}ms | ${m.conversationLength} | ${promptPreview} |`
+        '| # | Tool Called | Prompt Tokens | Completion Tokens | Total Tokens | Cumulative | Response Time | Messages |'
       )
-    })
-    sections.push('')
+      sections.push(
+        '|---|-------------|---------------|-------------------|--------------|------------|---------------|----------|'
+      )
 
-    // Tool usage breakdown
-    const toolUsage = result.summary.metrics.reduce(
-      (acc, m) => {
-        if (m.toolCalled) {
-          acc[m.toolCalled] = (acc[m.toolCalled] || 0) + 1
-        }
-        return acc
-      },
-      {} as Record<string, number>
-    )
+      summary.metrics.forEach(metric => {
+        // Handle both RequestMetrics (tokenCount) and BenchmarkMetric (totalTokens)
+        const totalTokens =
+          metric.totalTokens || (metric as any).tokenCount || 0
+        const promptTokens = metric.promptTokens || 0
+        const completionTokens = metric.completionTokens || 0
+        const cumulativeTokens = metric.cumulativeTokens || 0
+        const responseTime = metric.responseTime || 0
+        const conversationLength = metric.conversationLength || 0
+        const toolCalled = metric.toolCalled || 'N/A'
 
-    if (Object.keys(toolUsage).length > 0) {
-      sections.push('## 🔧 Tool Usage')
+        sections.push(
+          `| ${metric.promptNumber} | ${toolCalled.padEnd(20)} | ${promptTokens.toLocaleString().padStart(13)} | ${completionTokens.toLocaleString().padStart(17)} | ${totalTokens.toLocaleString().padStart(12)} | ${cumulativeTokens.toLocaleString().padStart(10)} | ${responseTime.toLocaleString().padEnd(13)}ms | ${conversationLength.toLocaleString().padStart(8)} |`
+        )
+      })
       sections.push('')
-      sections.push('| Tool | Count |')
-      sections.push('|------|-------|')
 
-      Object.entries(toolUsage)
-        .sort((a, b) => b[1] - a[1])
-        .forEach(([tool, count]) => {
-          sections.push(`| ${tool} | ${count} |`)
+      // Tool usage summary
+      if (summary.metrics.length > 0) {
+        sections.push('## 🔧 Tool Usage')
+        sections.push('')
+        const toolCounts: Record<string, number> = {}
+        summary.metrics.forEach(metric => {
+          const toolName = metric.toolCalled || 'N/A'
+          toolCounts[toolName] = (toolCounts[toolName] || 0) + 1
         })
-      sections.push('')
+
+        sections.push('| Tool | Count |')
+        sections.push('|------|-------|')
+        Object.entries(toolCounts)
+          .sort((a, b) => b[1] - a[1])
+          .forEach(([tool, count]) => {
+            sections.push(`| ${tool} | ${count} |`)
+          })
+        sections.push('')
+      }
     }
   } else {
     sections.push('## ℹ️ No benchmark data available')
@@ -148,8 +176,12 @@ export function generateMarkdownReport(result: BenchmarkResult): string {
   return sections.join('\n')
 }
 
-export function saveReport(content: string, filename: string): void {
-  const resultsDir = join(process.cwd(), 'results')
+export function saveReport(
+  content: string,
+  filename: string,
+  benchmarkName: string
+): void {
+  const resultsDir = join(process.cwd(), 'results', benchmarkName)
   mkdirSync(resultsDir, { recursive: true })
 
   const filepath = join(resultsDir, filename)
@@ -157,7 +189,10 @@ export function saveReport(content: string, filename: string): void {
   console.log(`✅ Report saved to ${filepath}`)
 }
 
-export function saveHistoricalReport(content: string): void {
+export function saveHistoricalReport(
+  content: string,
+  benchmarkName: string
+): void {
   const timestamp = new Date()
     .toISOString()
     .replace(/[:.]/g, '-')
@@ -165,10 +200,12 @@ export function saveHistoricalReport(content: string): void {
     .join('-')
     .slice(0, -5)
   const filename = `${timestamp}.md`
-  const historyPath = join(process.cwd(), 'results', 'history', filename)
-  const historyDir = join(process.cwd(), 'results', 'history')
+  const historyDir = join(process.cwd(), 'results', benchmarkName, 'history')
+  const historyPath = join(historyDir, filename)
 
+  // Ensure the history directory exists before trying to write
   mkdirSync(historyDir, { recursive: true })
+
   writeFileSync(historyPath, content)
   console.log(`📊 Historical report saved to ${historyPath}`)
 }

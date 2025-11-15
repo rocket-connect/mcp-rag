@@ -69,8 +69,18 @@ async function main() {
   // Wait a bit for file to be written
   await new Promise(resolve => setTimeout(resolve, 500))
 
+  // Determine the benchmark name from the test file or use a default
+  // For now, we'll use 'base-tool-selection' as default
+  // You can extend this to detect from environment or test file
+  const benchmarkName = process.env.BENCHMARK_NAME || 'base-tool-selection'
+
   // Read benchmark summary from file
-  const summaryPath = join(process.cwd(), 'results', 'benchmark-summary.json')
+  const summaryPath = join(
+    process.cwd(),
+    'results',
+    benchmarkName,
+    'benchmark-summary.json'
+  )
   let summary = undefined
 
   if (existsSync(summaryPath)) {
@@ -101,19 +111,24 @@ async function main() {
     summary,
   }
 
-  const report = generateMarkdownReport(result)
+  try {
+    const report = generateMarkdownReport(result)
 
-  console.log('\n' + '='.repeat(70))
-  console.log('📄 GENERATED REPORT')
-  console.log('='.repeat(70))
-  console.log(report)
-  console.log('='.repeat(70))
-  console.log('\n📝 Saving results...')
+    console.log('\n' + '='.repeat(70))
+    console.log('📄 GENERATED REPORT')
+    console.log('='.repeat(70))
+    console.log(report)
+    console.log('='.repeat(70))
+    console.log('\n📝 Saving results...')
 
-  saveReport(report, 'latest.md')
-  saveHistoricalReport(report)
+    saveReport(report, 'latest.md', benchmarkName)
+    saveHistoricalReport(report, benchmarkName)
 
-  console.log('\n✨ Benchmark complete!')
+    console.log('\n✨ Benchmark complete!')
+  } catch (error) {
+    console.error('❌ Error generating or saving report:', error)
+    throw error
+  }
 }
 
 main().catch(error => {

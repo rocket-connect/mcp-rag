@@ -4,6 +4,9 @@ import { generateMarkdownReport, saveReport } from '../reporting/markdown.js'
 async function main() {
   console.log('🚀 Running benchmarks in development mode...\n')
 
+  // Determine the benchmark name from environment or use default
+  const benchmarkName = process.env.BENCHMARK_NAME || 'base-tool-selection'
+
   const result = {
     timestamp: new Date().toISOString(),
   }
@@ -13,7 +16,7 @@ async function main() {
   console.log(report)
   console.log('\n📝 Saving results...')
 
-  saveReport(report, 'latest.md')
+  saveReport(report, 'latest.md', benchmarkName)
 
   console.log('\n✨ Benchmark complete!')
 }
