@@ -34,6 +34,19 @@ importers:
         version: 5.9.3
 
   benchmarks:
+    dependencies:
+      '@ai-sdk/openai':
+        specifier: ^2.0.65
+        version: 2.0.65(zod@4.1.12)
+      '@ai-sdk/provider-utils':
+        specifier: ^3.0.17
+        version: 3.0.17(zod@4.1.12)
+      ai:
+        specifier: ^5.0.93
+        version: 5.0.93(zod@4.1.12)
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
     devDependencies:
       '@types/node':
         specifier: ^20.10.0
@@ -53,6 +66,9 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.9
+        version: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
 
   packages/client:
     dependencies:

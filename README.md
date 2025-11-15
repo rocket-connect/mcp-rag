@@ -20,23 +20,23 @@ npm install @mcp-rag/client ai neo4j-driver
 ```
 
 ```typescript
-import { createMCPRag } from "@mcp-rag/client";
-import { openai } from "@ai-sdk/openai";
-import { tool } from "ai";
-import { z } from "zod";
-import neo4j from "neo4j-driver";
+import { createMCPRag } from '@mcp-rag/client'
+import { openai } from '@ai-sdk/openai'
+import { tool } from 'ai'
+import { z } from 'zod'
+import neo4j from 'neo4j-driver'
 
 const driver = neo4j.driver(
-  "neo4j://localhost:7687",
-  neo4j.auth.basic("neo4j", "password")
-);
+  'neo4j://localhost:7687',
+  neo4j.auth.basic('neo4j', 'password')
+)
 
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
 
   // Default: Uses AI SDK's embed() with text-embedding-3-small
-  embeddingModel: openai.textEmbeddingModel("text-embedding-3-small"),
+  embeddingModel: openai.textEmbeddingModel('text-embedding-3-small'),
 
   // Or provide custom embedding function:
   // embedding: async (text: string) => {
@@ -49,17 +49,17 @@ const rag = createMCPRag({
 
   tools: {
     searchDocs: tool({
-      description: "Search documentation for answers",
+      description: 'Search documentation for answers',
       inputSchema: z.object({
         query: z.string(),
-        category: z.enum(["api", "guide", "reference"]),
+        category: z.enum(['api', 'guide', 'reference']),
       }),
       execute: async ({ query, category }) => {
         // Your implementation
       },
     }),
     runTests: tool({
-      description: "Execute test suite",
+      description: 'Execute test suite',
       inputSchema: z.object({
         suite: z.string(),
         coverage: z.boolean().optional(),
@@ -70,11 +70,11 @@ const rag = createMCPRag({
     }),
     // ... 98 more tools
   },
-  strategy: "auto",
-});
+  strategy: 'auto',
+})
 
 // Sync tools to Neo4j - converts Zod schemas to graph
-await rag.sync();
+await rag.sync()
 
 /*
 What happens during sync():
@@ -131,7 +131,7 @@ Result: 100 tools in graph, only 5-10 selected per request via vector search
 
 // Now use any number of tools - we handle the complexity
 const result = await rag.generate({
-  prompt: "Find the auth bug, check what tests failed, then deploy the fix",
+  prompt: 'Find the auth bug, check what tests failed, then deploy the fix',
   // Behind the scenes:
   // 1. Prompt embedded using AI SDK's embed():
   //    const { embedding } = await embed({
@@ -142,7 +142,7 @@ const result = await rag.generate({
   // 3. Only top 5-10 tools sent to model (not all 100)
   // 4. Results stored in Neo4j with relationships to tools used
   // 5. Multi-step coordination handled automatically
-});
+})
 ```
 
 ## Why This Exists
@@ -161,14 +161,14 @@ This package solves that with intelligent tool selection and Neo4j-powered conte
 
 ```typescript
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: my100Tools,
-  strategy: "semantic", // Auto-select relevant tools per request
-});
+  strategy: 'semantic', // Auto-select relevant tools per request
+})
 
 // Model only sees 5-10 most relevant tools
-await rag.generate({ prompt: "Debug the auth flow" });
+await rag.generate({ prompt: 'Debug the auth flow' })
 ```
 
 ### Context Persistence with Neo4j
@@ -178,10 +178,10 @@ await rag.generate({ prompt: "Debug the auth flow" });
 // Retrieved automatically for follow-up requests
 
 await rag.generate({
-  prompt: "What did the last test run show?",
-  sessionId: "debug-session-123",
+  prompt: 'What did the last test run show?',
+  sessionId: 'debug-session-123',
   // Previous tool results auto-retrieved from Neo4j
-});
+})
 ```
 
 ### Multi-Step Orchestration
@@ -189,13 +189,13 @@ await rag.generate({
 ```typescript
 // Complex workflows without manual step management
 const result = await rag.generate({
-  prompt: "Research topic, write draft, get feedback, revise",
-  sessionId: "writing-session",
+  prompt: 'Research topic, write draft, get feedback, revise',
+  sessionId: 'writing-session',
   // Tool results cached in Neo4j
   // Smart step coordination via AI SDK
-});
+})
 
-console.log(result.steps); // Full execution trace
+console.log(result.steps) // Full execution trace
 ```
 
 ## Architecture
@@ -237,84 +237,84 @@ npm install -D @mcp-rag/types
 ### Basic Setup
 
 ```typescript
-import { createMCPRag } from "@mcp-rag/client";
-import { openai } from "@ai-sdk/openai";
-import neo4j from "neo4j-driver";
+import { createMCPRag } from '@mcp-rag/client'
+import { openai } from '@ai-sdk/openai'
+import neo4j from 'neo4j-driver'
 
 const driver = neo4j.driver(
-  "neo4j://localhost:7687",
-  neo4j.auth.basic("neo4j", "password")
-);
+  'neo4j://localhost:7687',
+  neo4j.auth.basic('neo4j', 'password')
+)
 
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myLargeToolset,
-  strategy: "graph", // Use knowledge graph for tool selection
-});
+  strategy: 'graph', // Use knowledge graph for tool selection
+})
 
 // On first call, automatically checks and applies migrations
 // Optional: explicitly sync tool definitions to Neo4j
-await rag.sync();
+await rag.sync()
 
 const result = await rag.generate({
-  prompt: "Continue from where we left off",
-  sessionId: "my-session",
+  prompt: 'Continue from where we left off',
+  sessionId: 'my-session',
   // Previous context auto-loaded from Neo4j
-});
+})
 ```
 
 ### Multi-Tenancy and Custom Migrations
 
 ```typescript
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   // Customize migration for multi-tenant architectures
   migration: {
     // Override or modify Cypher statements
-    onBeforeMigrate: async (statements) => {
+    onBeforeMigrate: async statements => {
       // Add organization ID to tool nodes
-      return statements.map((stmt) => ({
+      return statements.map(stmt => ({
         ...stmt,
         cypher: stmt.cypher.replace(
-          "CREATE (t:Tool",
-          "CREATE (t:Tool {orgId: $orgId}"
+          'CREATE (t:Tool',
+          'CREATE (t:Tool {orgId: $orgId}'
         ),
-        params: { ...stmt.params, orgId: "org_123" },
-      }));
+        params: { ...stmt.params, orgId: 'org_123' },
+      }))
     },
     // Run custom logic after migration
-    onAfterMigrate: async (session) => {
+    onAfterMigrate: async session => {
       // Create organization-specific indexes
       await session.run(`
         CREATE INDEX tool_org_name IF NOT EXISTS
         FOR (t:Tool)
         ON (t.orgId, t.name)
-      `);
+      `)
     },
     // Custom migration check (default checks Tool node existence)
-    shouldMigrate: async (session) => {
+    shouldMigrate: async session => {
       const result = await session.run(
-        "MATCH (t:Tool {orgId: $orgId}) RETURN count(t) as count",
-        { orgId: "org_123" }
-      );
-      return result.records[0].get("count") === 0;
+        'MATCH (t:Tool {orgId: $orgId}) RETURN count(t) as count',
+        { orgId: 'org_123' }
+      )
+      return result.records[0].get('count') === 0
     },
   },
-});
+})
 
 // Migrations run automatically on first generate/stream call
 // Or explicitly trigger:
-await rag.sync();
+await rag.sync()
 ```
 
 ### Advanced Migration Control
 
 ```typescript
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   migration: {
@@ -334,15 +334,15 @@ const rag = createMCPRag({
         `,
           {
             name,
-            orgId: "org_123",
+            orgId: 'org_123',
             description: tool.description,
             schema: JSON.stringify(tool.inputSchema),
           }
-        );
+        )
       }
     },
   },
-});
+})
 ```
 
 ## Configuration
@@ -350,47 +350,47 @@ const rag = createMCPRag({
 ```typescript
 interface MCPRagConfig {
   // AI SDK model (required)
-  model: LanguageModel;
+  model: LanguageModel
 
   // Neo4j connection (required)
-  neo4j: Driver;
+  neo4j: Driver
 
   // Your tools (required)
-  tools: Record<string, Tool>;
+  tools: Record<string, Tool>
 
   // Tool selection strategy
-  strategy?: "auto" | "semantic" | "graph";
+  strategy?: 'auto' | 'semantic' | 'graph'
 
   // Embedding model (uses AI SDK's EmbeddingModel interface)
-  embeddingModel?: EmbeddingModel<string>; // Default: openai.textEmbeddingModel('text-embedding-3-small')
+  embeddingModel?: EmbeddingModel<string> // Default: openai.textEmbeddingModel('text-embedding-3-small')
 
   // Or provide custom embedding function
-  embedding?: (text: string) => Promise<number[]>;
+  embedding?: (text: string) => Promise<number[]>
 
   // Max tools to send per request (default: 10)
-  maxActiveTools?: number;
+  maxActiveTools?: number
 
   // Migration configuration
   migration?: {
     // Modify migration statements (e.g., add orgId)
     onBeforeMigrate?: (
       statements: MigrationStatement[]
-    ) => Promise<MigrationStatement[]>;
+    ) => Promise<MigrationStatement[]>
 
     // Run custom logic after migration
-    onAfterMigrate?: (session: Session) => Promise<void>;
+    onAfterMigrate?: (session: Session) => Promise<void>
 
     // Custom check if migration needed
-    shouldMigrate?: (session: Session) => Promise<boolean>;
+    shouldMigrate?: (session: Session) => Promise<boolean>
 
     // Completely override migration
-    migrate?: (session: Session, tools: Record<string, Tool>) => Promise<void>;
-  };
+    migrate?: (session: Session, tools: Record<string, Tool>) => Promise<void>
+  }
 }
 
 interface MigrationStatement {
-  cypher: string;
-  params: Record<string, any>;
+  cypher: string
+  params: Record<string, any>
 }
 ```
 
@@ -403,14 +403,14 @@ Embeddings power the semantic tool selection. The package uses AI SDK's embeddin
 By default, uses OpenAI's text-embedding-3-small (1536 dimensions):
 
 ```typescript
-import { openai } from "@ai-sdk/openai";
+import { openai } from '@ai-sdk/openai'
 
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   // Default: openai.textEmbeddingModel('text-embedding-3-small')
-});
+})
 ```
 
 ### Different Embedding Model
@@ -418,16 +418,16 @@ const rag = createMCPRag({
 Use any AI SDK embedding model:
 
 ```typescript
-import { openai } from "@ai-sdk/openai";
-import { mistral } from "@ai-sdk/mistral";
+import { openai } from '@ai-sdk/openai'
+import { mistral } from '@ai-sdk/mistral'
 
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
-  embeddingModel: openai.textEmbeddingModel("text-embedding-3-large"), // 3072 dimensions
+  embeddingModel: openai.textEmbeddingModel('text-embedding-3-large'), // 3072 dimensions
   // or: mistral.textEmbeddingModel('mistral-embed'), // 1024 dimensions
-});
+})
 ```
 
 ### Custom Embedding Function
@@ -435,23 +435,23 @@ const rag = createMCPRag({
 Bring your own embedding implementation:
 
 ```typescript
-import { embed } from "ai";
-import { createMCPRag } from "@mcp-rag/client";
-import { cohere } from "@ai-sdk/cohere";
+import { embed } from 'ai'
+import { createMCPRag } from '@mcp-rag/client'
+import { cohere } from '@ai-sdk/cohere'
 
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   embedding: async (text: string) => {
     // Use AI SDK's embed() with any provider
     const { embedding } = await embed({
-      model: cohere.textEmbeddingModel("embed-english-v3.0"),
+      model: cohere.textEmbeddingModel('embed-english-v3.0'),
       value: text,
-    });
-    return embedding; // number[]
+    })
+    return embedding // number[]
   },
-});
+})
 ```
 
 ### Local Embeddings
@@ -459,22 +459,19 @@ const rag = createMCPRag({
 Use local models for privacy or cost savings:
 
 ```typescript
-import { pipeline } from "@xenova/transformers";
+import { pipeline } from '@xenova/transformers'
 
-const embedder = await pipeline(
-  "feature-extraction",
-  "Xenova/all-MiniLM-L6-v2"
-);
+const embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
 
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   embedding: async (text: string) => {
-    const output = await embedder(text, { pooling: "mean", normalize: true });
-    return Array.from(output.data); // number[]
+    const output = await embedder(text, { pooling: 'mean', normalize: true })
+    return Array.from(output.data) // number[]
   },
-});
+})
 ```
 
 ### Batch Embedding Optimization
@@ -483,13 +480,13 @@ For large tool sets, embeddings are generated using AI SDK's `embedMany()` for e
 
 ```typescript
 // Internally during sync(), the package uses:
-import { embedMany } from "ai";
+import { embedMany } from 'ai'
 
 const { embeddings } = await embedMany({
-  model: openai.textEmbeddingModel("text-embedding-3-small"),
+  model: openai.textEmbeddingModel('text-embedding-3-small'),
   values: toolDescriptions, // All tool descriptions at once
   maxParallelCalls: 5, // Parallel requests for speed
-});
+})
 ```
 
 ### What Gets Embedded
@@ -512,17 +509,17 @@ When using Neo4j, tool definitions are synced to the database. The migration sys
 On first call to `generate()` or `stream()`, the system checks if tools are migrated and automatically applies migrations if needed.
 
 ```typescript
-const rag = createMCPRag({ model, neo4j: driver, tools });
+const rag = createMCPRag({ model, neo4j: driver, tools })
 
 // This triggers auto-migration check
-await rag.generate({ prompt: "Hello" });
+await rag.generate({ prompt: 'Hello' })
 ```
 
 ### Explicit Sync
 
 ```typescript
 // Explicitly sync tool definitions
-await rag.sync();
+await rag.sync()
 
 // Useful for:
 // - Deployment scripts
@@ -544,26 +541,26 @@ For multi-tenant applications where tools belong to organizations:
 
 ```typescript
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   migration: {
-    onBeforeMigrate: async (statements) => {
+    onBeforeMigrate: async statements => {
       // Inject organization context
-      return statements.map((stmt) => ({
+      return statements.map(stmt => ({
         cypher: stmt.cypher.replace(
-          "CREATE (t:Tool",
-          "CREATE (t:Tool {orgId: $orgId, tenantId: $tenantId}"
+          'CREATE (t:Tool',
+          'CREATE (t:Tool {orgId: $orgId, tenantId: $tenantId}'
         ),
         params: {
           ...stmt.params,
           orgId: getCurrentOrg(),
           tenantId: getCurrentTenant(),
         },
-      }));
+      }))
     },
   },
-});
+})
 ```
 
 ### Custom Data Models
@@ -572,7 +569,7 @@ If you need complete control over the data model:
 
 ```typescript
 const rag = createMCPRag({
-  model: openai("gpt-4"),
+  model: openai('gpt-4'),
   neo4j: driver,
   tools: myTools,
   migration: {
@@ -582,8 +579,8 @@ const rag = createMCPRag({
         `
         MERGE (org:Organization {id: $orgId})
       `,
-        { orgId: "org_123" }
-      );
+        { orgId: 'org_123' }
+      )
 
       for (const [name, tool] of Object.entries(tools)) {
         await session.run(
@@ -596,19 +593,19 @@ const rag = createMCPRag({
         `,
           {
             name,
-            orgId: "org_123",
+            orgId: 'org_123',
             props: {
               description: tool.description,
               schema: JSON.stringify(tool.inputSchema),
-              version: "1.0",
+              version: '1.0',
               createdAt: new Date().toISOString(),
             },
           }
-        );
+        )
       }
     },
   },
-});
+})
 ```
 
 ## API
@@ -640,10 +637,10 @@ const stream = await rag.stream({
   prompt: string,
   sessionId: string,
   // ... other AI SDK streamText options
-});
+})
 
 for await (const chunk of stream) {
-  console.log(chunk);
+  console.log(chunk)
 }
 ```
 
@@ -653,16 +650,16 @@ Explicitly sync tool definitions to Neo4j. On first call to `generate()` or `str
 
 ```typescript
 // Sync tools on app startup
-await rag.sync();
+await rag.sync()
 
 // Sync after tool updates
 rag.addTool(
-  "newTool",
+  'newTool',
   tool({
     /* ... */
   })
-);
-await rag.sync();
+)
+await rag.sync()
 ```
 
 ## Use Cases

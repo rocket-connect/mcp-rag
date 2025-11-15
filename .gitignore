@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 repomix-output.xml
 .DS_Store
+benchmark-summary.json

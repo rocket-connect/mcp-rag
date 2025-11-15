@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "echo 'no build'",
-    "benchmark": "tsx src/scripts/run.ts",
+    "benchmark": "vitest run",
     "benchmark:ci": "tsx src/scripts/ci.ts",
     "typecheck": "tsc --noEmit",
     "test": "echo 'no tests'"
@@ -16,6 +16,13 @@
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.9"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.65",
+    "@ai-sdk/provider-utils": "^3.0.17",
+    "ai": "^5.0.93",
+    "zod": "^4.1.12"
   }
 }
