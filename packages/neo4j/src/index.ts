@@ -124,7 +124,8 @@ export class CypherBuilder {
     const whereClause =
       whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''
 
-    const cypher = `CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+    const cypher =
+      `CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
 YIELD node, score
 ${whereClause}
 RETURN node.name AS name,

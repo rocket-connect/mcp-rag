@@ -304,9 +304,7 @@ describe('CypherBuilder', () => {
       expect(result.cypher).toContain('FOR (t:Tool)')
       expect(result.cypher).toContain('ON t.embedding')
       expect(result.cypher).toContain('`vector.dimensions`: $dimensions')
-      expect(result.cypher).toContain(
-        "`vector.similarity_function`: 'cosine'"
-      )
+      expect(result.cypher).toContain("`vector.similarity_function`: 'cosine'")
 
       expect(result.params).toEqual({
         dimensions: 1536,
@@ -314,10 +312,7 @@ describe('CypherBuilder', () => {
     })
 
     it('should generate cypher to create vector index with euclidean similarity', () => {
-      const result = CypherBuilder.createVectorIndex(
-        'tool_embeddings',
-        768,
-      )
+      const result = CypherBuilder.createVectorIndex('tool_embeddings', 768)
 
       expect(result.cypher).toMatchSnapshot()
       expect(result.params).toEqual({
