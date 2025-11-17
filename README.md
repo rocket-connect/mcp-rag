@@ -14,6 +14,8 @@ See our [benchmarks](./benchmarks/latest.md) for performance improvements.
 
 ## Installation
 
+[![npm version](https://badge.fury.io/js/@mcp-rag%2Fclient.svg)](https://badge.fury.io/js/@mcp-rag%2Fclient)
+
 ```bash
 npm install @mcp-rag/client @ai-sdk/openai neo4j-driver ai
 ```
