@@ -1,201 +1,220 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CypherBuilder > checkVectorIndex > should generate cypher to check vector index status 1`] = `
-"SHOW VECTOR INDEXES
-WHERE name = $indexName
-RETURN name, state, type"
+exports[`CypherBuilder - Basic Operations > createDecomposedTool > should create cypher for single tool with embeddings > single-tool-creation 1`] = `
+{
+  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $tool_name,
+    tool.description = $tool_description,
+    tool.embedding = $tool_embedding,
+    tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $param0_name,
+    param0.toolId = tool.id,
+    param0.type = $param0_type,
+    param0.description = $param0_description,
+    param0.required = $param0_required,
+    param0.embedding = $param0_embedding,
+    param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $param1_name,
+    param1.toolId = tool.id,
+    param1.type = $param1_type,
+    param1.description = $param1_description,
+    param1.required = $param1_required,
+    param1.embedding = $param1_embedding,
+    param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+    returnType.type = 'object',
+    returnType.description = 'Tool execution result',
+    returnType.embedding = $return_embedding,
+    returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)",
+  "params": {
+    "param0_description": "Search query string",
+    "param0_name": "query",
+    "param0_required": true,
+    "param0_type": "string",
+    "param1_description": "Maximum number of results",
+    "param1_name": "limit",
+    "param1_required": false,
+    "param1_type": "number",
+    "tool_description": "A test tool for searching",
+    "tool_name": "searchTool",
+    "toolset_hash": "test-toolset-hash",
+  },
+}
 `;
 
-exports[`CypherBuilder > createTools > should generate cypher for mixed tools with and without embeddings 1`] = `
-"
-      MERGE (t0:Tool {name: $tool0_name})
-      SET t0.name = $tool0_name,
-            t0.description = $tool0_description,
-            t0.schema = $tool0_schema,
-            t0.embedding = $tool0_embedding,
-            t0.updatedAt = datetime()
-
-      MERGE (t1:Tool {name: $tool1_name})
-      SET t1.name = $tool1_name,
-            t1.description = $tool1_description,
-            t1.schema = $tool1_schema,
-            t1.updatedAt = datetime()"
+exports[`CypherBuilder - Basic Operations > createDecomposedTools > should create cypher for multiple tools > multiple-tools-creation 1`] = `
+{
+  "cypher": "MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t0_tool_name,
+    tool.description = $t0_tool_description,
+    tool.embedding = $t0_tool_embedding,
+    tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t0_param0_name,
+    param0.toolId = tool.id,
+    param0.type = $t0_param0_type,
+    param0.description = $t0_param0_description,
+    param0.required = $t0_param0_required,
+    param0.embedding = $t0_param0_embedding,
+    param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t0_param1_name,
+    param1.toolId = tool.id,
+    param1.type = $t0_param1_type,
+    param1.description = $t0_param1_description,
+    param1.required = $t0_param1_required,
+    param1.embedding = $t0_param1_embedding,
+    param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+    returnType.type = 'object',
+    returnType.description = 'Tool execution result',
+    returnType.embedding = $t0_return_embedding,
+    returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)
+MERGE (toolset:ToolSet {hash: $t1_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t1_tool_name,
+    tool.description = $t1_tool_description,
+    tool.embedding = $t1_tool_embedding,
+    tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t1_param0_name,
+    param0.toolId = tool.id,
+    param0.type = $t1_param0_type,
+    param0.description = $t1_param0_description,
+    param0.required = $t1_param0_required,
+    param0.embedding = $t1_param0_embedding,
+    param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t1_param1_name,
+    param1.toolId = tool.id,
+    param1.type = $t1_param1_type,
+    param1.description = $t1_param1_description,
+    param1.required = $t1_param1_required,
+    param1.embedding = $t1_param1_embedding,
+    param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+    returnType.type = 'object',
+    returnType.description = 'Tool execution result',
+    returnType.embedding = $t1_return_embedding,
+    returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)",
+  "params": {
+    "t0_param0_description": "Search query string",
+    "t0_param0_name": "query",
+    "t0_param0_required": true,
+    "t0_param0_type": "string",
+    "t0_param1_description": "Maximum number of results",
+    "t0_param1_name": "limit",
+    "t0_param1_required": false,
+    "t0_param1_type": "number",
+    "t0_tool_description": "A test tool for searching",
+    "t0_tool_name": "tool1",
+    "t0_toolset_hash": "test-toolset-hash",
+    "t1_param0_description": "Search query string",
+    "t1_param0_name": "query",
+    "t1_param0_required": true,
+    "t1_param0_type": "string",
+    "t1_param1_description": "Maximum number of results",
+    "t1_param1_name": "limit",
+    "t1_param1_required": false,
+    "t1_param1_type": "number",
+    "t1_tool_description": "A test tool for searching",
+    "t1_tool_name": "tool2",
+    "t1_toolset_hash": "test-toolset-hash",
+  },
+}
 `;
 
-exports[`CypherBuilder > createTools > should generate cypher for multiple tools without embeddings 1`] = `
-"
-      MERGE (t0:Tool {name: $tool0_name})
-      SET t0.name = $tool0_name,
-            t0.description = $tool0_description,
-            t0.schema = $tool0_schema,
-            t0.updatedAt = datetime()
-
-      MERGE (t1:Tool {name: $tool1_name})
-      SET t1.name = $tool1_name,
-            t1.description = $tool1_description,
-            t1.schema = $tool1_schema,
-            t1.updatedAt = datetime()"
-`;
-
-exports[`CypherBuilder > createTools > should generate cypher for tools with embeddings 1`] = `
-"
-      MERGE (t0:Tool {name: $tool0_name})
-      SET t0.name = $tool0_name,
-            t0.description = $tool0_description,
-            t0.schema = $tool0_schema,
-            t0.embedding = $tool0_embedding,
-            t0.updatedAt = datetime()
-
-      MERGE (t1:Tool {name: $tool1_name})
-      SET t1.name = $tool1_name,
-            t1.description = $tool1_description,
-            t1.schema = $tool1_schema,
-            t1.embedding = $tool1_embedding,
-            t1.updatedAt = datetime()"
-`;
-
-exports[`CypherBuilder > createVectorIndex > should generate cypher to create vector index with cosine similarity 1`] = `
-"CREATE VECTOR INDEX tool_embeddings IF NOT EXISTS
-FOR (t:Tool)
-ON t.embedding
-OPTIONS {
-  indexConfig: {
-    \`vector.dimensions\`: $dimensions,
-    \`vector.similarity_function\`: 'cosine'
-  }
-}"
-`;
-
-exports[`CypherBuilder > createVectorIndex > should generate cypher to create vector index with custom name 1`] = `
-"CREATE VECTOR INDEX my_custom_index IF NOT EXISTS
-FOR (t:Tool)
-ON t.embedding
-OPTIONS {
-  indexConfig: {
-    \`vector.dimensions\`: $dimensions,
-    \`vector.similarity_function\`: 'cosine'
-  }
-}"
-`;
-
-exports[`CypherBuilder > createVectorIndex > should generate cypher to create vector index with euclidean similarity 1`] = `
-"CREATE VECTOR INDEX tool_embeddings IF NOT EXISTS
-FOR (t:Tool)
-ON t.embedding
-OPTIONS {
-  indexConfig: {
-    \`vector.dimensions\`: $dimensions,
-    \`vector.similarity_function\`: 'cosine'
-  }
-}"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate basic vector search query 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search filtered by IDs 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-WHERE node.id IN $filterIds
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search filtered by names 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-WHERE node.name IN $filterNames
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search with ID and score filters only 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-WHERE node.id IN $filterIds AND score >= $minScore
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search with custom index name 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search with custom limit 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search with minimum score filter 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-WHERE score >= $minScore
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search with multiple filters 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-WHERE node.id IN $filterIds AND node.name IN $filterNames AND score >= $minScore
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should generate vector search with name and score filters only 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-WHERE node.name IN $filterNames AND score >= $minScore
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
-`;
-
-exports[`CypherBuilder > vectorSearch > should handle empty filter arrays gracefully 1`] = `
-"CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC"
+exports[`CypherBuilder - Basic Operations > migrate/sync > should create migration with toolset and tools > migration-statement 1`] = `
+{
+  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
+SET toolset.updatedAt = datetime(),
+toolset.toolCount = $tool_count
+  WITH toolset
+  MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t0_tool_name,
+tool.description = $t0_tool_description,
+tool.embedding = $t0_tool_embedding,
+tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t0_param0_name,
+param0.toolId = tool.id,
+param0.type = $t0_param0_type,
+param0.description = $t0_param0_description,
+param0.required = $t0_param0_required,
+param0.embedding = $t0_param0_embedding,
+param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t0_param1_name,
+param1.toolId = tool.id,
+param1.type = $t0_param1_type,
+param1.description = $t0_param1_description,
+param1.required = $t0_param1_required,
+param1.embedding = $t0_param1_embedding,
+param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+returnType.type = 'object',
+returnType.description = 'Tool execution result',
+returnType.embedding = $t0_return_embedding,
+returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)",
+  "params": {
+    "t0_param0_description": "Search query string",
+    "t0_param0_name": "query",
+    "t0_param0_required": true,
+    "t0_param0_type": "string",
+    "t0_param1_description": "Maximum number of results",
+    "t0_param1_name": "limit",
+    "t0_param1_required": false,
+    "t0_param1_type": "number",
+    "t0_tool_description": "A test tool for searching",
+    "t0_tool_name": "searchTool",
+    "t0_toolset_hash": "test-toolset-hash",
+    "tool_count": 1,
+    "toolset_hash": "test-toolset-hash",
+  },
+}
 `;

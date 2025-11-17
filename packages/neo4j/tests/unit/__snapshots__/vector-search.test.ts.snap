@@ -1,0 +1,114 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CypherBuilder - Vector Search > static vector index methods > should check vector index statement > check-vector-index 1`] = `
+{
+  "cypher": "SHOW VECTOR INDEXES
+YIELD name, state, populationPercent
+WHERE name = $indexName
+RETURN name, state, populationPercent",
+  "params": {
+    "indexName": "tool_index",
+  },
+}
+`;
+
+exports[`CypherBuilder - Vector Search > static vector index methods > should create vector index statement > create-vector-index 1`] = `
+{
+  "cypher": "CREATE VECTOR INDEX tool_index IF NOT EXISTS
+FOR (t:Tool)
+ON t.embedding
+OPTIONS {indexConfig: {
+  \`vector.dimensions\`: $dimensions,
+  \`vector.similarity_function\`: 'cosine'
+}}",
+  "params": {
+    "dimensions": 1536,
+  },
+}
+`;
+
+exports[`CypherBuilder - Vector Search > vectorSearchDecomposed > should create full depth search query > vector-search-full 1`] = `
+{
+  "cypher": "CALL db.index.vector.queryNodes($indexName, $limit * 5, $queryVector)
+YIELD node AS tool, score AS toolScore
+WHERE toolScore >= $minScore
+OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)
+WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore,
+     collect(DISTINCT {
+       name: param.name,
+       type: param.type,
+       required: param.required,
+       description: param.description
+     }) AS params,
+     collect(DISTINCT {
+       type: returnType.type,
+       description: returnType.description
+     })[0] AS returnType
+RETURN 
+  tool.name AS name,
+  tool.description AS description,
+  toString({parameters: params, returns: returnType}) AS schema,
+  toolScore AS relevance,
+  COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
+ORDER BY toolScore DESC
+LIMIT $limit",
+  "params": {
+    "indexName": "tool_vector_index",
+    "limit": 5,
+    "minScore": 0,
+    "queryVector": "[VECTOR_PLACEHOLDER]",
+  },
+}
+`;
+
+exports[`CypherBuilder - Vector Search > vectorSearchDecomposed > should create low depth search query > vector-search-low 1`] = `
+{
+  "cypher": "CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+YIELD node AS tool, score
+WHERE score >= $minScore
+WITH tool, score, 'tool' AS component
+RETURN 
+  tool.name AS name,
+  tool.description AS description,
+  '' AS schema,
+  score AS relevance,
+  [{component: component, score: score}] AS matches
+ORDER BY score DESC",
+  "params": {
+    "indexName": "tool_vector_index",
+    "limit": 5,
+    "minScore": 0,
+    "queryVector": "[VECTOR_PLACEHOLDER]",
+  },
+}
+`;
+
+exports[`CypherBuilder - Vector Search > vectorSearchDecomposed > should create mid depth search query > vector-search-mid 1`] = `
+{
+  "cypher": "CALL db.index.vector.queryNodes($indexName, $limit * 3, $queryVector)
+YIELD node AS tool, score AS toolScore
+WHERE toolScore >= $minScore
+OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore, collect({
+  name: param.name,
+  type: param.type,
+  required: param.required,
+  description: param.description
+}) AS params
+RETURN 
+  tool.name AS name,
+  tool.description AS description,
+  toString(params) AS schema,
+  toolScore AS relevance,
+  COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
+ORDER BY toolScore DESC
+LIMIT $limit",
+  "params": {
+    "indexName": "tool_vector_index",
+    "limit": 5,
+    "minScore": 0,
+    "queryVector": "[VECTOR_PLACEHOLDER]",
+  },
+}
+`;

@@ -42,5 +42,9 @@
     "rag"
   ],
   "author": "rconnect.tech",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dedent": "^1.7.0",
+    "zod": "^4.1.12"
+  }
 }

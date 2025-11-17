@@ -1,3 +1,4 @@
+import dedent from 'dedent'
 import type { Tool } from 'ai'
 
 export interface CypherStatement {
@@ -8,58 +9,177 @@ export interface CypherStatement {
 export interface ToolInput {
   name: string
   tool: Tool
-  embedding?: number[]
+  embedding: number[]
 }
 
 export interface VectorSearchOptions {
   vector: number[]
   limit?: number
   indexName?: string
-  filterByIds?: string[]
-  filterByNames?: string[]
+  depth?: 'low' | 'mid' | 'full'
   minScore?: number
 }
 
+export interface SearchResult {
+  name: string
+  description: string
+  schema: string
+  relevance: number
+  matches?: Array<{
+    component: string
+    score: number
+  }>
+}
+
+export interface MigrationResult {
+  toolsetCreated: boolean
+  toolsCreated: number
+  nodesCreated: number
+  statements: CypherStatement[]
+}
+
 export class CypherBuilder {
+  private toolsetHash: string
+
+  constructor(options: { toolsetHash: string }) {
+    this.toolsetHash = options.toolsetHash
+  }
+
   /**
-   * Generate Cypher MERGE statements for multiple tools with optional embeddings
-   * @param tools - Array of tools with names, tool objects, and optional embeddings
-   * @returns Cypher statement with parameters
+   * Creates a complete migration that sets up the toolset and all tool nodes
+   * This is useful for initializing or syncing your tools to Neo4j
    */
-  static createTools(tools: ToolInput[]): CypherStatement {
-    const statements: string[] = []
-    const params: Record<string, unknown> = {}
-
-    tools.forEach((toolInput, index) => {
-      const { name, tool, embedding } = toolInput
-      const paramPrefix = `tool${index}`
-      const varName = `t${index}` // Use unique variable name for each tool
-
-      params[`${paramPrefix}_name`] = name
-      params[`${paramPrefix}_description`] = tool.description || ''
-      params[`${paramPrefix}_schema`] = JSON.stringify(tool.inputSchema || {})
-
-      // Add embedding parameter if provided
-      if (embedding) {
-        params[`${paramPrefix}_embedding`] = embedding
+  migrate(options: {
+    tools: Array<{
+      name: string
+      tool: Tool
+      embeddings: {
+        tool: number[]
+        parameters: Record<string, number[]>
+        returnType: number[]
       }
+    }>
+  }): CypherStatement {
+    const { tools } = options
 
-      // Build the SET clause conditionally based on whether embedding is provided
-      const setClause = embedding
-        ? `SET ${varName}.name = $${paramPrefix}_name,
-            ${varName}.description = $${paramPrefix}_description,
-            ${varName}.schema = $${paramPrefix}_schema,
-            ${varName}.embedding = $${paramPrefix}_embedding,
-            ${varName}.updatedAt = datetime()`
-        : `SET ${varName}.name = $${paramPrefix}_name,
-            ${varName}.description = $${paramPrefix}_description,
-            ${varName}.schema = $${paramPrefix}_schema,
-            ${varName}.updatedAt = datetime()`
+    // First create the toolset
+    const toolsetStatement = dedent`
+      MERGE (toolset:ToolSet {hash: $toolset_hash})
+      SET toolset.updatedAt = datetime(),
+          toolset.toolCount = $tool_count
+    `
 
-      statements.push(`
-      MERGE (${varName}:Tool {name: $${paramPrefix}_name})
-      ${setClause}`)
-    })
+    // Then create all tools
+    const toolsResult = this.createDecomposedTools({ tools })
+
+    // Combine into a single migration
+    const cypher = dedent`
+      ${toolsetStatement}
+      WITH toolset
+      ${toolsResult.cypher}
+    `
+
+    return {
+      cypher,
+      params: {
+        ...toolsResult.params,
+        toolset_hash: this.toolsetHash,
+        tool_count: tools.length,
+      },
+    }
+  }
+
+  /**
+   * Alias for migrate() - syncs tools to Neo4j
+   */
+  sync(options: {
+    tools: Array<{
+      name: string
+      tool: Tool
+      embeddings: {
+        tool: number[]
+        parameters: Record<string, number[]>
+        returnType: number[]
+      }
+    }>
+  }): CypherStatement {
+    return this.migrate(options)
+  }
+
+  createDecomposedTool(options: {
+    name: string
+    tool: Tool
+    embeddings: {
+      tool: number[]
+      parameters: Record<string, number[]>
+      returnType: number[]
+    }
+  }): CypherStatement {
+    const { name, tool, embeddings } = options
+    const statements: string[] = []
+    const params: Record<string, any> = {}
+
+    params.toolset_hash = this.toolsetHash
+    statements.push(dedent`
+      MERGE (toolset:ToolSet {hash: $toolset_hash})
+      SET toolset.updatedAt = datetime()
+    `)
+
+    params.tool_name = name
+    params.tool_description = tool.description || ''
+    params.tool_embedding = embeddings.tool
+
+    statements.push(dedent`
+      CREATE (tool:Tool {id: randomUUID()})
+      SET tool.name = $tool_name,
+          tool.description = $tool_description,
+          tool.embedding = $tool_embedding,
+          tool.updatedAt = datetime()
+      WITH toolset, tool
+      MERGE (toolset)-[:HAS_TOOL]->(tool)
+    `)
+
+    const schema = tool.inputSchema as any
+    const parameters = schema?.properties || {}
+    const required = schema?.required || []
+
+    Object.entries(parameters).forEach(
+      ([paramName, paramDef]: [string, any], idx) => {
+        const paramPrefix = `param${idx}`
+
+        params[`${paramPrefix}_name`] = paramName
+        params[`${paramPrefix}_type`] = paramDef.type || 'unknown'
+        params[`${paramPrefix}_description`] = paramDef.description || ''
+        params[`${paramPrefix}_required`] = required.includes(paramName)
+        params[`${paramPrefix}_embedding`] = embeddings.parameters[paramName]
+
+        statements.push(dedent`
+        CREATE (param${idx}:Parameter {id: randomUUID()})
+        SET param${idx}.name = $${paramPrefix}_name,
+            param${idx}.toolId = tool.id,
+            param${idx}.type = $${paramPrefix}_type,
+            param${idx}.description = $${paramPrefix}_description,
+            param${idx}.required = $${paramPrefix}_required,
+            param${idx}.embedding = $${paramPrefix}_embedding,
+            param${idx}.updatedAt = datetime()
+        WITH toolset, tool, param${idx}
+        MERGE (tool)-[:HAS_PARAM]->(param${idx})
+      `)
+      }
+    )
+
+    statements.push(dedent`
+      CREATE (returnType:ReturnType {id: randomUUID()})
+      SET returnType.toolId = tool.id,
+          returnType.type = 'object',
+          returnType.description = 'Tool execution result',
+          returnType.embedding = $return_embedding,
+          returnType.updatedAt = datetime()
+      WITH toolset, tool, returnType
+      MERGE (tool)-[:RETURNS]->(returnType)
+    `)
+
+    params.return_embedding = embeddings.returnType
 
     return {
       cypher: statements.join('\n'),
@@ -67,124 +187,189 @@ export class CypherBuilder {
     }
   }
 
-  /**
-   * Generate Cypher MERGE statement for a single tool with optional embedding
-   * @param name - Tool name
-   * @param tool - Tool object
-   * @param embedding - Optional embedding vector
-   * @returns Cypher statement with parameters
-   */
-  static createTool(
-    name: string,
-    tool: Tool,
-    embedding?: number[]
-  ): CypherStatement {
-    return CypherBuilder.createTools([{ name, tool, embedding }])
+  createDecomposedTools(options: {
+    tools: Array<{
+      name: string
+      tool: Tool
+      embeddings: {
+        tool: number[]
+        parameters: Record<string, number[]>
+        returnType: number[]
+      }
+    }>
+  }): CypherStatement {
+    const { tools } = options
+    const statements: string[] = []
+    const allParams: Record<string, any> = {}
+
+    tools.forEach((toolInput, toolIdx) => {
+      const result = this.createDecomposedTool({
+        name: toolInput.name,
+        tool: toolInput.tool,
+        embeddings: toolInput.embeddings,
+      })
+
+      const prefixedParams: Record<string, any> = {}
+      Object.entries(result.params).forEach(([key, value]) => {
+        prefixedParams[`t${toolIdx}_${key}`] = value
+      })
+
+      Object.assign(allParams, prefixedParams)
+
+      const prefixedCypher = result.cypher.replace(
+        /\$(\w+)/g,
+        (match, paramName) => {
+          return `$t${toolIdx}_${paramName}`
+        }
+      )
+
+      statements.push(prefixedCypher)
+    })
+
+    return {
+      cypher: statements.join('\n'),
+      params: allParams,
+    }
   }
 
-  /**
-   * Generate Cypher vector search query with filtering
-   * @param options - Vector search options
-   * @returns Cypher statement with parameters
-   */
-  static vectorSearch(options: VectorSearchOptions): CypherStatement {
+  vectorSearchDecomposed(options: VectorSearchOptions): CypherStatement {
     const {
       vector,
-      limit = 10,
-      indexName = 'tool_embeddings',
-      filterByIds,
-      filterByNames,
-      minScore,
+      limit = 5,
+      indexName = 'tool_vector_index',
+      depth = 'low',
+      minScore = 0.0,
     } = options
 
-    const params: Record<string, any> = {
-      queryVector: vector,
-      limit,
-      indexName,
+    const multipliers = {
+      low: 1,
+      mid: 3,
+      full: 5,
     }
 
-    // Build WHERE clause for filters
-    const whereClauses: string[] = []
+    const multiplier = multipliers[depth]
 
-    if (filterByIds && filterByIds.length > 0) {
-      whereClauses.push('node.id IN $filterIds')
-      params.filterIds = filterByIds
+    if (depth === 'low') {
+      return {
+        cypher: dedent`
+          CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+          YIELD node AS tool, score
+          WHERE score >= $minScore
+          WITH tool, score, 'tool' AS component
+          RETURN 
+            tool.name AS name,
+            tool.description AS description,
+            '' AS schema,
+            score AS relevance,
+            [{component: component, score: score}] AS matches
+          ORDER BY score DESC
+        `,
+        params: {
+          indexName,
+          limit,
+          queryVector: vector,
+          minScore,
+        },
+      }
     }
 
-    if (filterByNames && filterByNames.length > 0) {
-      whereClauses.push('node.name IN $filterNames')
-      params.filterNames = filterByNames
+    if (depth === 'mid') {
+      return {
+        cypher: dedent`
+          CALL db.index.vector.queryNodes($indexName, $limit * ${multiplier}, $queryVector)
+          YIELD node AS tool, score AS toolScore
+          WHERE toolScore >= $minScore
+          OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+          WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore, collect({
+            name: param.name,
+            type: param.type,
+            required: param.required,
+            description: param.description
+          }) AS params
+          RETURN 
+            tool.name AS name,
+            tool.description AS description,
+            toString(params) AS schema,
+            toolScore AS relevance,
+            COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
+          ORDER BY toolScore DESC
+          LIMIT $limit
+        `,
+        params: {
+          indexName,
+          limit,
+          queryVector: vector,
+          minScore,
+        },
+      }
     }
 
-    if (minScore !== undefined) {
-      whereClauses.push('score >= $minScore')
-      params.minScore = minScore
-    }
-
-    const whereClause =
-      whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''
-
-    const cypher =
-      `CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-YIELD node, score
-${whereClause}
-RETURN node.name AS name,
-       node.description AS description,
-       node.schema AS schema,
-       score
-ORDER BY score DESC`.trim()
-
+    // depth === 'full'
     return {
-      cypher,
-      params,
-    }
-  }
-
-  /**
-   * Generate Cypher to create vector index
-   * @param indexName - Name of the index
-   * @param dimensions - Vector dimensions (e.g., 1536 for OpenAI embeddings)
-   * @param similarityFunction - 'cosine' or 'euclidean'
-   * @returns Cypher statement with parameters
-   */
-  static createVectorIndex(
-    indexName: string,
-    dimensions: number,
-    similarityFunction: 'cosine' | 'euclidean' = 'cosine'
-  ): CypherStatement {
-    const cypher = `CREATE VECTOR INDEX ${indexName} IF NOT EXISTS
-FOR (t:Tool)
-ON t.embedding
-OPTIONS {
-  indexConfig: {
-    \`vector.dimensions\`: $dimensions,
-    \`vector.similarity_function\`: '${similarityFunction}'
-  }
-}`
-
-    return {
-      cypher,
-      params: {
-        dimensions,
-      },
-    }
-  }
-
-  /**
-   * Generate Cypher to check if vector index exists and is online
-   * @param indexName - Name of the index
-   * @returns Cypher statement with parameters
-   */
-  static checkVectorIndex(indexName: string): CypherStatement {
-    const cypher = `SHOW VECTOR INDEXES
-WHERE name = $indexName
-RETURN name, state, type`
-
-    return {
-      cypher,
+      cypher: dedent`
+        CALL db.index.vector.queryNodes($indexName, $limit * ${multiplier}, $queryVector)
+        YIELD node AS tool, score AS toolScore
+        WHERE toolScore >= $minScore
+        OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+        OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)
+        WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore,
+             collect(DISTINCT {
+               name: param.name,
+               type: param.type,
+               required: param.required,
+               description: param.description
+             }) AS params,
+             collect(DISTINCT {
+               type: returnType.type,
+               description: returnType.description
+             })[0] AS returnType
+        RETURN 
+          tool.name AS name,
+          tool.description AS description,
+          toString({parameters: params, returns: returnType}) AS schema,
+          toolScore AS relevance,
+          COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
+        ORDER BY toolScore DESC
+        LIMIT $limit
+      `,
       params: {
         indexName,
+        limit,
+        queryVector: vector,
+        minScore,
       },
+    }
+  }
+
+  static createVectorIndex(options: {
+    indexName: string
+    dimensions: number
+  }): CypherStatement {
+    const { indexName, dimensions } = options
+    return {
+      cypher: dedent`
+        CREATE VECTOR INDEX ${indexName} IF NOT EXISTS
+        FOR (t:Tool)
+        ON t.embedding
+        OPTIONS {indexConfig: {
+          \`vector.dimensions\`: $dimensions,
+          \`vector.similarity_function\`: 'cosine'
+        }}
+      `,
+      params: { dimensions },
+    }
+  }
+
+  static checkVectorIndex(options: { indexName: string }): CypherStatement {
+    const { indexName } = options
+    return {
+      cypher: dedent`
+        SHOW VECTOR INDEXES
+        YIELD name, state, populationPercent
+        WHERE name = $indexName
+        RETURN name, state, populationPercent
+      `,
+      params: { indexName },
     }
   }
 }

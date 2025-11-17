@@ -1,0 +1,232 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CypherBuilder - Migration > migrate with multiple tools > should create complete migration for empty toolset > empty-migration 1`] = `
+{
+  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
+SET toolset.updatedAt = datetime(),
+toolset.toolCount = $tool_count
+  WITH toolset",
+  "params": {
+    "tool_count": 0,
+    "toolset_hash": "migration-test-hash",
+  },
+}
+`;
+
+exports[`CypherBuilder - Migration > migrate with multiple tools > should create migration for single tool > single-tool-migration 1`] = `
+{
+  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
+SET toolset.updatedAt = datetime(),
+toolset.toolCount = $tool_count
+  WITH toolset
+  MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t0_tool_name,
+tool.description = $t0_tool_description,
+tool.embedding = $t0_tool_embedding,
+tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t0_param0_name,
+param0.toolId = tool.id,
+param0.type = $t0_param0_type,
+param0.description = $t0_param0_description,
+param0.required = $t0_param0_required,
+param0.embedding = $t0_param0_embedding,
+param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t0_param1_name,
+param1.toolId = tool.id,
+param1.type = $t0_param1_type,
+param1.description = $t0_param1_description,
+param1.required = $t0_param1_required,
+param1.embedding = $t0_param1_embedding,
+param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+returnType.type = 'object',
+returnType.description = 'Tool execution result',
+returnType.embedding = $t0_return_embedding,
+returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)",
+  "params": {
+    "t0_param0_description": "Action to perform",
+    "t0_param0_name": "action",
+    "t0_param0_required": true,
+    "t0_param0_type": "string",
+    "t0_param1_description": "Target resource",
+    "t0_param1_name": "target",
+    "t0_param1_required": false,
+    "t0_param1_type": "string",
+    "t0_tool_description": "Migration test tool",
+    "t0_tool_name": "migrateTest",
+    "t0_toolset_hash": "migration-test-hash",
+    "tool_count": 1,
+    "toolset_hash": "migration-test-hash",
+  },
+}
+`;
+
+exports[`CypherBuilder - Migration > migrate with multiple tools > should create migration for three tools > multi-tool-migration 1`] = `
+{
+  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
+SET toolset.updatedAt = datetime(),
+toolset.toolCount = $tool_count
+  WITH toolset
+  MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t0_tool_name,
+tool.description = $t0_tool_description,
+tool.embedding = $t0_tool_embedding,
+tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t0_param0_name,
+param0.toolId = tool.id,
+param0.type = $t0_param0_type,
+param0.description = $t0_param0_description,
+param0.required = $t0_param0_required,
+param0.embedding = $t0_param0_embedding,
+param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t0_param1_name,
+param1.toolId = tool.id,
+param1.type = $t0_param1_type,
+param1.description = $t0_param1_description,
+param1.required = $t0_param1_required,
+param1.embedding = $t0_param1_embedding,
+param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+returnType.type = 'object',
+returnType.description = 'Tool execution result',
+returnType.embedding = $t0_return_embedding,
+returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)
+MERGE (toolset:ToolSet {hash: $t1_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t1_tool_name,
+tool.description = $t1_tool_description,
+tool.embedding = $t1_tool_embedding,
+tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t1_param0_name,
+param0.toolId = tool.id,
+param0.type = $t1_param0_type,
+param0.description = $t1_param0_description,
+param0.required = $t1_param0_required,
+param0.embedding = $t1_param0_embedding,
+param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t1_param1_name,
+param1.toolId = tool.id,
+param1.type = $t1_param1_type,
+param1.description = $t1_param1_description,
+param1.required = $t1_param1_required,
+param1.embedding = $t1_param1_embedding,
+param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+returnType.type = 'object',
+returnType.description = 'Tool execution result',
+returnType.embedding = $t1_return_embedding,
+returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)
+MERGE (toolset:ToolSet {hash: $t2_toolset_hash})
+SET toolset.updatedAt = datetime()
+CREATE (tool:Tool {id: randomUUID()})
+SET tool.name = $t2_tool_name,
+tool.description = $t2_tool_description,
+tool.embedding = $t2_tool_embedding,
+tool.updatedAt = datetime()
+WITH toolset, tool
+MERGE (toolset)-[:HAS_TOOL]->(tool)
+CREATE (param0:Parameter {id: randomUUID()})
+SET param0.name = $t2_param0_name,
+param0.toolId = tool.id,
+param0.type = $t2_param0_type,
+param0.description = $t2_param0_description,
+param0.required = $t2_param0_required,
+param0.embedding = $t2_param0_embedding,
+param0.updatedAt = datetime()
+WITH toolset, tool, param0
+MERGE (tool)-[:HAS_PARAM]->(param0)
+CREATE (param1:Parameter {id: randomUUID()})
+SET param1.name = $t2_param1_name,
+param1.toolId = tool.id,
+param1.type = $t2_param1_type,
+param1.description = $t2_param1_description,
+param1.required = $t2_param1_required,
+param1.embedding = $t2_param1_embedding,
+param1.updatedAt = datetime()
+WITH toolset, tool, param1
+MERGE (tool)-[:HAS_PARAM]->(param1)
+CREATE (returnType:ReturnType {id: randomUUID()})
+SET returnType.toolId = tool.id,
+returnType.type = 'object',
+returnType.description = 'Tool execution result',
+returnType.embedding = $t2_return_embedding,
+returnType.updatedAt = datetime()
+WITH toolset, tool, returnType
+MERGE (tool)-[:RETURNS]->(returnType)",
+  "params": {
+    "t0_param0_description": "Action to perform",
+    "t0_param0_name": "action",
+    "t0_param0_required": true,
+    "t0_param0_type": "string",
+    "t0_param1_description": "Target resource",
+    "t0_param1_name": "target",
+    "t0_param1_required": false,
+    "t0_param1_type": "string",
+    "t0_tool_description": "Migration test tool",
+    "t0_tool_name": "toolA",
+    "t0_toolset_hash": "migration-test-hash",
+    "t1_param0_description": "Action to perform",
+    "t1_param0_name": "action",
+    "t1_param0_required": true,
+    "t1_param0_type": "string",
+    "t1_param1_description": "Target resource",
+    "t1_param1_name": "target",
+    "t1_param1_required": false,
+    "t1_param1_type": "string",
+    "t1_tool_description": "Migration test tool",
+    "t1_tool_name": "toolB",
+    "t1_toolset_hash": "migration-test-hash",
+    "t2_param0_description": "Action to perform",
+    "t2_param0_name": "action",
+    "t2_param0_required": true,
+    "t2_param0_type": "string",
+    "t2_param1_description": "Target resource",
+    "t2_param1_name": "target",
+    "t2_param1_required": false,
+    "t2_param1_type": "string",
+    "t2_tool_description": "Migration test tool",
+    "t2_tool_name": "toolC",
+    "t2_toolset_hash": "migration-test-hash",
+    "tool_count": 3,
+    "toolset_hash": "migration-test-hash",
+  },
+}
+`;
