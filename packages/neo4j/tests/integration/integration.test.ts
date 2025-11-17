@@ -319,8 +319,8 @@ describe('Neo4j Integration Tests', () => {
     )
 
     // Generate cypher using CypherBuilder instance method
-    // @ts-ignore
     const { cypher: originalCypher, params } = builder.createDecomposedTools({
+      // @ts-ignore
       tools,
     })
 
