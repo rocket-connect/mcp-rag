@@ -132,7 +132,9 @@ describe('CypherBuilder - Basic Operations', () => {
         ],
       })
 
-      expect(removeEmbeddings(result)).toMatchSnapshot('multiple-tools-creation')
+      expect(removeEmbeddings(result)).toMatchSnapshot(
+        'multiple-tools-creation'
+      )
       expect(result.params.t0_tool_name).toBe('tool1')
       expect(result.params.t1_tool_name).toBe('tool2')
     })

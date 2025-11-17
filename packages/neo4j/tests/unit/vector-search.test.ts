@@ -50,7 +50,9 @@ describe('CypherBuilder - Vector Search', () => {
       })
 
       expect(removeEmbeddings(result)).toMatchSnapshot('vector-search-mid')
-      expect(result.cypher).toContain('OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)')
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)'
+      )
       expect(result.cypher).toContain('toString(params) AS schema')
       expect(result.cypher).toContain('matches')
       expect(result.params.limit).toBe(5)
@@ -64,8 +66,12 @@ describe('CypherBuilder - Vector Search', () => {
       })
 
       expect(removeEmbeddings(result)).toMatchSnapshot('vector-search-full')
-      expect(result.cypher).toContain('OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)')
-      expect(result.cypher).toContain('toString({parameters: params, returns: returnType}) AS schema')
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)'
+      )
+      expect(result.cypher).toContain(
+        'toString({parameters: params, returns: returnType}) AS schema'
+      )
       expect(result.cypher).toContain('matches')
       expect(result.params.limit).toBe(5)
     })
@@ -132,7 +138,9 @@ describe('CypherBuilder - Vector Search', () => {
       })
 
       expect(removeEmbeddings(result)).toMatchSnapshot('create-vector-index')
-      expect(result.cypher).toContain('CREATE VECTOR INDEX tool_index IF NOT EXISTS')
+      expect(result.cypher).toContain(
+        'CREATE VECTOR INDEX tool_index IF NOT EXISTS'
+      )
       expect(result.cypher).toContain('FOR (t:Tool)')
       expect(result.cypher).toContain('ON t.embedding')
       expect(result.params.dimensions).toBe(1536)
@@ -171,7 +179,9 @@ describe('CypherBuilder - Vector Search', () => {
         depth: 'mid',
       })
 
-      expect(result.cypher).toContain('COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches')
+      expect(result.cypher).toContain(
+        'COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches'
+      )
     })
 
     it('should include matches array for full depth', () => {
@@ -181,7 +191,9 @@ describe('CypherBuilder - Vector Search', () => {
         depth: 'full',
       })
 
-      expect(result.cypher).toContain('COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches')
+      expect(result.cypher).toContain(
+        'COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches'
+      )
     })
   })
 })

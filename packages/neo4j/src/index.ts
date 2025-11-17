@@ -218,7 +218,7 @@ export class CypherBuilder {
 
       const prefixedCypher = result.cypher.replace(
         /\$(\w+)/g,
-        (match, paramName) => {
+        (_, paramName) => {
           return `$t${toolIdx}_${paramName}`
         }
       )
