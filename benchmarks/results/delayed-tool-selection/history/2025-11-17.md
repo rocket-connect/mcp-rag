@@ -1,10 +1,10 @@
 # 🚀 MCP-RAG Multi-Benchmark Report
 
-**Generated:** 11/17/2025, 05:20:53 PM
+**Generated:** 11/17/2025, 10:25:48 AM
 
 ## 📍 Git Information
 
-- **Commit:** `78ab4af`
+- **Commit:** `80e6584`
 - **Branch:** `main`
 
 ## 📊 Overview
@@ -23,10 +23,10 @@
 
 ### ⚡ Performance
 
-- **Total Response Time:** 21134ms
-- **Average Response Time:** 4227ms
-- **Min Response Time:** 3271ms
-- **Max Response Time:** 5198ms
+- **Total Response Time:** 13151ms
+- **Average Response Time:** 2630ms
+- **Min Response Time:** 1923ms
+- **Max Response Time:** 3671ms
 
 ### 🔢 Token Usage
 
@@ -41,11 +41,11 @@
 
 | #   | Tool Called       | Prompt Tokens | Completion Tokens | Total Tokens | Cumulative | Response Time | Messages |
 | --- | ----------------- | ------------- | ----------------- | ------------ | ---------- | ------------- | -------- |
-| 1   | get_pull_request  | 9,426         | 29                | 9,455        | 9,455      | 5,198 ms      | 2        |
-| 1   | list_issues       | 9,427         | 28                | 9,455        | 9,455      | 3,675 ms      | 2        |
-| 1   | create_issue      | 9,439         | 35                | 9,474        | 9,474      | 4,726 ms      | 2        |
-| 1   | get_file_contents | 9,433         | 33                | 9,466        | 9,466      | 3,271 ms      | 2        |
-| 1   | add_issue_comment | 9,436         | 37                | 9,473        | 9,473      | 4,264 ms      | 2        |
+| 1   | get_pull_request  | 9,426         | 29                | 9,455        | 9,455      | 1,923 ms      | 2        |
+| 1   | list_issues       | 9,427         | 28                | 9,455        | 9,455      | 3,671 ms      | 2        |
+| 1   | create_issue      | 9,439         | 35                | 9,474        | 9,474      | 2,218 ms      | 2        |
+| 1   | get_file_contents | 9,433         | 33                | 9,466        | 9,466      | 3,108 ms      | 2        |
+| 1   | add_issue_comment | 9,436         | 37                | 9,473        | 9,473      | 2,231 ms      | 2        |
 
 ### 🔧 Tool Usage
 
