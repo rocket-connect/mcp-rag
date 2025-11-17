@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rag/client",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "MCP RAG - Context-aware tool management for AI SDK",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,6 +15,15 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rocket-connect/mcp-rag.git",
+    "directory": "packages/client"
+  },
+  "homepage": "https://github.com/rocket-connect/mcp-rag#readme",
+  "bugs": {
+    "url": "https://github.com/rocket-connect/mcp-rag/issues"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -46,7 +55,12 @@
     "ai-sdk",
     "neo4j",
     "tools",
-    "agents"
+    "agents",
+    "llm",
+    "tool-management",
+    "context-aware",
+    "openai",
+    "model-context-protocol"
   ],
   "author": "rconnect.tech",
   "license": "MIT"

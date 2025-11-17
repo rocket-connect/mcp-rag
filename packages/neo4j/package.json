@@ -1,7 +1,7 @@
 {
   "name": "@mcp-rag/neo4j",
-  "version": "0.1.0",
-  "description": "Neo4j utilities for MCP RAG - Cypher building and test assertions",
+  "version": "0.0.0",
+  "description": "Neo4j utilities for MCP RAG - Cypher query builder and test assertions for graph-based tool indexing",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -15,6 +15,15 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rocket-connect/mcp-rag.git",
+    "directory": "packages/neo4j"
+  },
+  "homepage": "https://github.com/rocket-connect/mcp-rag#readme",
+  "bugs": {
+    "url": "https://github.com/rocket-connect/mcp-rag/issues"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
