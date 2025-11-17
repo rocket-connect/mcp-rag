@@ -202,6 +202,13 @@ export class CypherBuilder {
     const statements: string[] = []
     const allParams: Record<string, any> = {}
 
+    // Create toolset once at the beginning
+    statements.push(dedent`
+      MERGE (toolset:ToolSet {hash: $toolset_hash})
+      SET toolset.updatedAt = datetime()
+    `)
+    allParams.toolset_hash = this.toolsetHash
+
     tools.forEach((toolInput, toolIdx) => {
       const result = this.createDecomposedTool({
         name: toolInput.name,
@@ -211,17 +218,30 @@ export class CypherBuilder {
 
       const prefixedParams: Record<string, any> = {}
       Object.entries(result.params).forEach(([key, value]) => {
-        prefixedParams[`t${toolIdx}_${key}`] = value
+        // Skip the toolset_hash param since we already added it
+        if (key !== 'toolset_hash') {
+          prefixedParams[`t${toolIdx}_${key}`] = value
+        }
       })
 
       Object.assign(allParams, prefixedParams)
 
-      const prefixedCypher = result.cypher.replace(
-        /\$(\w+)/g,
-        (_, paramName) => {
+      // Remove the toolset MERGE statement from individual tools
+      // It was already created once at the beginning
+      let prefixedCypher = result.cypher
+        .replace(
+          /MERGE \(toolset:ToolSet \{hash: \$toolset_hash\}\)\s*SET toolset\.updatedAt = datetime\(\)\s*/,
+          ''
+        )
+        .replace(/\$(\w+)/g, (_, paramName) => {
           return `$t${toolIdx}_${paramName}`
-        }
-      )
+        })
+        .trim()
+
+      // Add WITH toolset at the end to pass it to next tool
+      if (toolIdx < tools.length - 1) {
+        prefixedCypher += '\nWITH toolset'
+      }
 
       statements.push(prefixedCypher)
     })
@@ -241,73 +261,52 @@ export class CypherBuilder {
       minScore = 0.0,
     } = options
 
-    const multipliers = {
-      low: 1,
-      mid: 3,
-      full: 5,
+    let cypher: string
+    const params: Record<string, any> = {
+      queryVector: vector,
+      limit,
+      indexName,
+      minScore,
     }
-
-    const multiplier = multipliers[depth]
 
     if (depth === 'low') {
-      return {
-        cypher: dedent`
-          CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
-          YIELD node AS tool, score
-          WHERE score >= $minScore
-          WITH tool, score, 'tool' AS component
-          RETURN 
-            tool.name AS name,
-            tool.description AS description,
-            '' AS schema,
-            score AS relevance,
-            [{component: component, score: score}] AS matches
-          ORDER BY score DESC
-        `,
-        params: {
-          indexName,
-          limit,
-          queryVector: vector,
-          minScore,
-        },
-      }
-    }
-
-    if (depth === 'mid') {
-      return {
-        cypher: dedent`
-          CALL db.index.vector.queryNodes($indexName, $limit * ${multiplier}, $queryVector)
-          YIELD node AS tool, score AS toolScore
-          WHERE toolScore >= $minScore
-          OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
-          WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore, collect({
-            name: param.name,
-            type: param.type,
-            required: param.required,
-            description: param.description
-          }) AS params
-          RETURN 
-            tool.name AS name,
-            tool.description AS description,
-            toString(params) AS schema,
-            toolScore AS relevance,
-            COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
-          ORDER BY toolScore DESC
-          LIMIT $limit
-        `,
-        params: {
-          indexName,
-          limit,
-          queryVector: vector,
-          minScore,
-        },
-      }
-    }
-
-    // depth === 'full'
-    return {
-      cypher: dedent`
-        CALL db.index.vector.queryNodes($indexName, $limit * ${multiplier}, $queryVector)
+      cypher = dedent`
+        CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
+        YIELD node AS tool, score
+        WHERE score >= $minScore
+        RETURN 
+          tool.name AS name,
+          tool.description AS description,
+          'tool' AS component,
+          score AS relevance
+        ORDER BY score DESC
+      `
+    } else if (depth === 'mid') {
+      cypher = dedent`
+        CALL db.index.vector.queryNodes($indexName, $limit * 3, $queryVector)
+        YIELD node AS tool, score AS toolScore
+        WHERE toolScore >= $minScore
+        OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+        WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore,
+             collect(DISTINCT {
+               name: param.name,
+               type: param.type,
+               required: param.required,
+               description: param.description
+             }) AS params
+        RETURN 
+          tool.name AS name,
+          tool.description AS description,
+          toString(params) AS schema,
+          toolScore AS relevance,
+          COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
+        ORDER BY toolScore DESC
+        LIMIT $limit
+      `
+    } else {
+      // full depth
+      cypher = dedent`
+        CALL db.index.vector.queryNodes($indexName, $limit * 5, $queryVector)
         YIELD node AS tool, score AS toolScore
         WHERE toolScore >= $minScore
         OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
@@ -331,13 +330,12 @@ export class CypherBuilder {
           COLLECT(DISTINCT {component: matchComponent, score: matchScore}) AS matches
         ORDER BY toolScore DESC
         LIMIT $limit
-      `,
-      params: {
-        indexName,
-        limit,
-        queryVector: vector,
-        minScore,
-      },
+      `
+    }
+
+    return {
+      cypher,
+      params,
     }
   }
 
@@ -346,6 +344,7 @@ export class CypherBuilder {
     dimensions: number
   }): CypherStatement {
     const { indexName, dimensions } = options
+
     return {
       cypher: dedent`
         CREATE VECTOR INDEX ${indexName} IF NOT EXISTS
@@ -356,12 +355,15 @@ export class CypherBuilder {
           \`vector.similarity_function\`: 'cosine'
         }}
       `,
-      params: { dimensions },
+      params: {
+        dimensions,
+      },
     }
   }
 
   static checkVectorIndex(options: { indexName: string }): CypherStatement {
     const { indexName } = options
+
     return {
       cypher: dedent`
         SHOW VECTOR INDEXES
@@ -369,7 +371,9 @@ export class CypherBuilder {
         WHERE name = $indexName
         RETURN name, state, populationPercent
       `,
-      params: { indexName },
+      params: {
+        indexName,
+      },
     }
   }
 }

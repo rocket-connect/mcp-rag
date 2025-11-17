@@ -67,13 +67,11 @@ exports[`CypherBuilder - Vector Search > vectorSearchDecomposed > should create 
   "cypher": "CALL db.index.vector.queryNodes($indexName, $limit, $queryVector)
 YIELD node AS tool, score
 WHERE score >= $minScore
-WITH tool, score, 'tool' AS component
 RETURN 
   tool.name AS name,
   tool.description AS description,
-  '' AS schema,
-  score AS relevance,
-  [{component: component, score: score}] AS matches
+  'tool' AS component,
+  score AS relevance
 ORDER BY score DESC",
   "params": {
     "indexName": "tool_vector_index",
@@ -90,12 +88,13 @@ exports[`CypherBuilder - Vector Search > vectorSearchDecomposed > should create 
 YIELD node AS tool, score AS toolScore
 WHERE toolScore >= $minScore
 OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
-WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore, collect({
-  name: param.name,
-  type: param.type,
-  required: param.required,
-  description: param.description
-}) AS params
+WITH tool, toolScore, 'tool' AS matchComponent, toolScore AS matchScore,
+     collect(DISTINCT {
+       name: param.name,
+       type: param.type,
+       required: param.required,
+       description: param.description
+     }) AS params
 RETURN 
   tool.name AS name,
   tool.description AS description,

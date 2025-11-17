@@ -137,6 +137,9 @@ describe('CypherBuilder - Basic Operations', () => {
       )
       expect(result.params.t0_tool_name).toBe('tool1')
       expect(result.params.t1_tool_name).toBe('tool2')
+      expect(result.params.toolset_hash).toBe(toolsetHash)
+      expect(result.params.t0_toolset_hash).toBeUndefined()
+      expect(result.params.t1_toolset_hash).toBeUndefined()
     })
   })
 
@@ -161,6 +164,7 @@ describe('CypherBuilder - Basic Operations', () => {
       expect(result.cypher).toContain('MERGE (toolset:ToolSet')
       expect(result.params.toolset_hash).toBe(toolsetHash)
       expect(result.params.tool_count).toBe(1)
+      expect(result.params.t0_toolset_hash).toBeUndefined()
     })
 
     it('should sync tools (alias for migrate)', () => {

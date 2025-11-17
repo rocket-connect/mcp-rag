@@ -67,6 +67,7 @@ describe('CypherBuilder - Migration', () => {
       expect(removeEmbeddings(result)).toMatchSnapshot('single-tool-migration')
       expect(result.params.tool_count).toBe(1)
       expect(result.params.t0_tool_name).toBe('migrateTest')
+      expect(result.params.t0_toolset_hash).toBeUndefined()
     })
 
     it('should create migration for three tools', () => {
@@ -108,6 +109,9 @@ describe('CypherBuilder - Migration', () => {
       expect(result.params.t0_tool_name).toBe('toolA')
       expect(result.params.t1_tool_name).toBe('toolB')
       expect(result.params.t2_tool_name).toBe('toolC')
+      expect(result.params.t0_toolset_hash).toBeUndefined()
+      expect(result.params.t1_toolset_hash).toBeUndefined()
+      expect(result.params.t2_toolset_hash).toBeUndefined()
     })
   })
 
@@ -206,7 +210,7 @@ describe('CypherBuilder - Migration', () => {
       })
 
       expect(result.params.toolset_hash).toBe(toolsetHash)
-      expect(result.params.t0_toolset_hash).toBe(toolsetHash)
+      expect(result.params.t0_toolset_hash).toBeUndefined()
     })
 
     it('should set updatedAt and toolCount on toolset', () => {

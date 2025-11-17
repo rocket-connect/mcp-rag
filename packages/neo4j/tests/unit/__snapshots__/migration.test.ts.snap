@@ -5,7 +5,9 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
   "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
-  WITH toolset",
+  WITH toolset
+  MERGE (toolset:ToolSet {hash: $toolset_hash})
+SET toolset.updatedAt = datetime()",
   "params": {
     "tool_count": 0,
     "toolset_hash": "migration-test-hash",
@@ -19,7 +21,7 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
   WITH toolset
-  MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+  MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime()
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
@@ -67,7 +69,6 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t0_param1_type": "string",
     "t0_tool_description": "Migration test tool",
     "t0_tool_name": "migrateTest",
-    "t0_toolset_hash": "migration-test-hash",
     "tool_count": 1,
     "toolset_hash": "migration-test-hash",
   },
@@ -80,7 +81,7 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
   WITH toolset
-  MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+  MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime()
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
@@ -117,8 +118,7 @@ returnType.embedding = $t0_return_embedding,
 returnType.updatedAt = datetime()
 WITH toolset, tool, returnType
 MERGE (tool)-[:RETURNS]->(returnType)
-MERGE (toolset:ToolSet {hash: $t1_toolset_hash})
-SET toolset.updatedAt = datetime()
+WITH toolset
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t1_tool_name,
 tool.description = $t1_tool_description,
@@ -154,8 +154,7 @@ returnType.embedding = $t1_return_embedding,
 returnType.updatedAt = datetime()
 WITH toolset, tool, returnType
 MERGE (tool)-[:RETURNS]->(returnType)
-MERGE (toolset:ToolSet {hash: $t2_toolset_hash})
-SET toolset.updatedAt = datetime()
+WITH toolset
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t2_tool_name,
 tool.description = $t2_tool_description,
@@ -202,7 +201,6 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t0_param1_type": "string",
     "t0_tool_description": "Migration test tool",
     "t0_tool_name": "toolA",
-    "t0_toolset_hash": "migration-test-hash",
     "t1_param0_description": "Action to perform",
     "t1_param0_name": "action",
     "t1_param0_required": true,
@@ -213,7 +211,6 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t1_param1_type": "string",
     "t1_tool_description": "Migration test tool",
     "t1_tool_name": "toolB",
-    "t1_toolset_hash": "migration-test-hash",
     "t2_param0_description": "Action to perform",
     "t2_param0_name": "action",
     "t2_param0_required": true,
@@ -224,7 +221,6 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t2_param1_type": "string",
     "t2_tool_description": "Migration test tool",
     "t2_tool_name": "toolC",
-    "t2_toolset_hash": "migration-test-hash",
     "tool_count": 3,
     "toolset_hash": "migration-test-hash",
   },

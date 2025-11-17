@@ -57,7 +57,7 @@ MERGE (tool)-[:RETURNS]->(returnType)",
 
 exports[`CypherBuilder - Basic Operations > createDecomposedTools > should create cypher for multiple tools > multiple-tools-creation 1`] = `
 {
-  "cypher": "MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime()
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
@@ -94,8 +94,7 @@ SET returnType.toolId = tool.id,
     returnType.updatedAt = datetime()
 WITH toolset, tool, returnType
 MERGE (tool)-[:RETURNS]->(returnType)
-MERGE (toolset:ToolSet {hash: $t1_toolset_hash})
-SET toolset.updatedAt = datetime()
+WITH toolset
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t1_tool_name,
     tool.description = $t1_tool_description,
@@ -142,7 +141,6 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t0_param1_type": "number",
     "t0_tool_description": "A test tool for searching",
     "t0_tool_name": "tool1",
-    "t0_toolset_hash": "test-toolset-hash",
     "t1_param0_description": "Search query string",
     "t1_param0_name": "query",
     "t1_param0_required": true,
@@ -153,7 +151,7 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t1_param1_type": "number",
     "t1_tool_description": "A test tool for searching",
     "t1_tool_name": "tool2",
-    "t1_toolset_hash": "test-toolset-hash",
+    "toolset_hash": "test-toolset-hash",
   },
 }
 `;
@@ -164,7 +162,7 @@ exports[`CypherBuilder - Basic Operations > migrate/sync > should create migrati
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
   WITH toolset
-  MERGE (toolset:ToolSet {hash: $t0_toolset_hash})
+  MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime()
 CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
@@ -212,7 +210,6 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "t0_param1_type": "number",
     "t0_tool_description": "A test tool for searching",
     "t0_tool_name": "searchTool",
-    "t0_toolset_hash": "test-toolset-hash",
     "tool_count": 1,
     "toolset_hash": "test-toolset-hash",
   },
