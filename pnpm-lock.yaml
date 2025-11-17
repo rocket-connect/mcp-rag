@@ -116,9 +116,6 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12
     devDependencies:
-      '@mcp-rag/types':
-        specifier: workspace:*
-        version: link:../types
       '@types/node':
         specifier: ^20.11.0
         version: 20.19.25
@@ -134,25 +131,6 @@ importers:
       vitest:
         specifier: ^4.0.9
         version: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
-
-  packages/types:
-    dependencies:
-      ai:
-        specifier: ^5.0.93
-        version: 5.0.93(zod@4.1.12)
-      neo4j-driver:
-        specifier: ^6.0.1
-        version: 6.0.1
-      zod:
-        specifier: ^4.1.12
-        version: 4.1.12
-    devDependencies:
-      tsup:
-        specifier: ^8.0.1
-        version: 8.5.1(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.3.3
-        version: 5.9.3
 
 packages:
 

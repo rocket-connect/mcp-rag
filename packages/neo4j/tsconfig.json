@@ -7,10 +7,5 @@
     "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "references": [
-    {
-      "path": "../types"
-    }
-  ]
+  "exclude": ["node_modules", "dist"]
 }

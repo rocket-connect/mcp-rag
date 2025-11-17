@@ -27,7 +27,6 @@
     "neo4j-driver": "^6.0.1"
   },
   "devDependencies": {
-    "@mcp-rag/types": "workspace:*",
     "@types/node": "^20.11.0",
     "@vitest/ui": "^2.1.8",
     "ai": "^5.0.93",
