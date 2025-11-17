@@ -9,7 +9,7 @@
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [
     {
-      "path": "../utils"
+      "path": "../neo4j"
     }
   ]
 }
