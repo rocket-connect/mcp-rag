@@ -67,6 +67,10 @@ const result = await rag.generateText({
 })
 ```
 
+<div align="center">
+  <img src="/docs/example-tools-model.png" alt="Tools Select Model" width="80%" />
+</div>
+
 ## Features
 
 - **Graph-based indexing** – Tools are indexed with their relationships and metadata
