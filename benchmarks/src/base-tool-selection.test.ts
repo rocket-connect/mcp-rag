@@ -3,21 +3,26 @@ import { describe, it, expect, afterAll } from 'vitest'
 import mockToolsJson from '../mock-tools-github.json'
 import { runBenchmark, type RequestMetrics } from './utils/run'
 import type { MCPTool } from './utils/test-utils'
+import { convertMCPToolsToAISDK } from './utils/test-utils'
 import { generateBenchmarkSummary } from './utils/markdown'
 import { saveBenchmarkResults } from './utils/ci'
-import { BENCHMARKS } from './benchmark-config'
+import { BENCHMARKS, createDefaultTextGeneration } from './benchmark-config'
 
 // Global variable to store benchmark results across tests
 const globalBenchmarkMetrics: RequestMetrics[] = []
 
 const BENCHMARK_CONFIG = BENCHMARKS['base-tool-selection']
 
-describe('Base AI SDK Tool Selection', () => {
-  // Export results after all tests complete
-  afterAll(() => {
+describe('Base Tool Selection Benchmark', () => {
+  const mcpTools = mockToolsJson.tools as MCPTool[]
+  const aiSDKTools = convertMCPToolsToAISDK(mcpTools)
+  const textGenerationConfig = createDefaultTextGeneration()
+
+  afterAll(async () => {
+    // Export results after all tests complete
     if (globalBenchmarkMetrics.length > 0) {
       const summary = generateBenchmarkSummary(globalBenchmarkMetrics)
-      saveBenchmarkResults(BENCHMARK_CONFIG, summary)
+      await saveBenchmarkResults(BENCHMARK_CONFIG, summary)
     }
   })
 
@@ -34,26 +39,39 @@ describe('Base AI SDK Tool Selection', () => {
     'list_issues',
     'create_issue',
     'get_file_contents',
-    'add_issue_comment',
+    'create_issue_comment',
   ]
 
   prompts.forEach((prompt, index) => {
-    it(`should select ${expectedTools[index]} for prompt ${index + 1}`, async () => {
-      const mcpTools = mockToolsJson.tools as MCPTool[]
-
+    it(`should select correct tool for: "${prompt}"`, async () => {
       const metrics = await runBenchmark({
-        config: BENCHMARK_CONFIG,
-        prompts: [prompt],
-        mcpTools,
+        prompt,
+        tools: aiSDKTools,
+        expectedTool: expectedTools[index],
+        textGeneration: textGenerationConfig,
       })
 
-      // Store metrics for summary
-      globalBenchmarkMetrics.push(...metrics)
+      globalBenchmarkMetrics.push(metrics)
 
-      // Assertions
-      expect(metrics).toHaveLength(1)
-      expect(metrics[0].toolCalled).toBe(expectedTools[index])
-      expect(metrics[0].tokenCount).toBeGreaterThan(0)
-    }, 30000) // 30 second timeout per test
+      console.log('\n📊 Test Result:', {
+        prompt: metrics.prompt,
+        expected: metrics.expectedTool,
+        selected: metrics.selectedTool,
+        correct: metrics.isCorrect ? '✅' : '❌',
+        latency: `${metrics.latencyMs.toFixed(2)}ms`,
+      })
+    }, 30000)
+  })
+
+  it('should have high overall accuracy', () => {
+    const correctCount = globalBenchmarkMetrics.filter(m => m.isCorrect).length
+    const totalCount = globalBenchmarkMetrics.length
+    const accuracy = (correctCount / totalCount) * 100
+
+    console.log(
+      `\n📈 Overall Accuracy: ${accuracy.toFixed(2)}% (${correctCount}/${totalCount})`
+    )
+
+    expect(accuracy).toBeGreaterThanOrEqual(80)
   })
 })

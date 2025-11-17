@@ -91,8 +91,8 @@ function generateMarkdownReport(
   markdown += `| --- | ----------------- | ------------- | ----------------- | ------------ | ---------- | ------------- | -------- |\n`
 
   summary.metrics.forEach(m => {
-    const toolName = m.toolCalled || 'None'
-    markdown += `| ${m.promptNumber}   | ${toolName.padEnd(17)} | ${m.promptTokens.toLocaleString().padStart(13)} | ${m.completionTokens.toLocaleString().padStart(17)} | ${m.tokenCount.toLocaleString().padStart(12)} | ${m.cumulativeTokens.toLocaleString().padStart(10)} | ${m.responseTime.toLocaleString().padStart(13)} ms | ${String(m.conversationLength).padStart(8)} |\n`
+    const toolName = m.selectedTool || 'None'
+    markdown += `| ${m.prompt}   | ${toolName.padEnd(17)} | ${m.promptTokens.toLocaleString().padStart(13)} | ${m.completionTokens.toLocaleString().padStart(17)} | ${m.tokenCount.toLocaleString().padStart(12)} | ${m.cumulativeTokens.toLocaleString().padStart(10)} | ${m.responseTime.toLocaleString().padStart(13)} ms | ${String(m.conversationLength).padStart(8)} |\n`
   })
 
   markdown += `\n### 🔧 Tool Usage\n\n`

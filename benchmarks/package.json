@@ -19,9 +19,12 @@
     "vitest": "^4.0.9"
   },
   "dependencies": {
+    "@mcp-rag/neo4j": "workspace:*",
+    "@mcp-rag/client": "workspace:*",
     "@ai-sdk/openai": "^2.0.65",
     "@ai-sdk/provider-utils": "^3.0.17",
     "ai": "^5.0.93",
+    "neo4j-driver": "^6.0.1",
     "zod": "^4.1.12"
   }
 }

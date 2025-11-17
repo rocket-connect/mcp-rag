@@ -1,112 +1,154 @@
-import { generateText, type CoreMessage } from 'ai'
-import { openai } from '@ai-sdk/openai'
-import type { BenchmarkConfig } from '../benchmark-config'
-import type { MCPTool } from './test-utils'
-import { convertMCPToolsToAISDK } from './test-utils'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Tool } from 'ai'
+import type { TextGenerationConfig } from '../benchmark-config'
 
 export interface RequestMetrics {
-  promptNumber: number
   prompt: string
+  expectedTool: string
+  selectedTool: string | null
+  isCorrect: boolean
+  latencyMs: number
+  timestamp: string
+  // Additional properties for benchmark reporting
   toolCalled: string | null
-  tokenCount: number
-  cumulativeTokens: number
+  promptNumber: number
   promptTokens: number
   completionTokens: number
+  tokenCount: number
+  cumulativeTokens: number
   responseTime: number
   conversationLength: number
 }
 
-export interface RunBenchmarkOptions {
-  config: BenchmarkConfig
-  prompts: string[]
-  mcpTools: MCPTool[]
-  onProgress?: (metric: RequestMetrics) => void
+/**
+ * Run a single benchmark request
+ */
+export async function runBenchmark(params: {
+  prompt: string
+  tools: Record<string, Tool>
+  expectedTool: string
+  textGeneration: TextGenerationConfig
+}): Promise<RequestMetrics> {
+  const { prompt, tools, expectedTool, textGeneration } = params
+
+  const startTime = performance.now()
+
+  try {
+    const result = await textGeneration.generateText({
+      prompt,
+      tools,
+      model: textGeneration.model,
+    })
+
+    const endTime = performance.now()
+    const latencyMs = endTime - startTime
+
+    const selectedTool = result.toolCalls[0]?.toolName || null
+    const isCorrect = selectedTool === expectedTool
+
+    // ✅ FIXED: Extract token usage from the result
+    const promptTokens = result.usage?.promptTokens || 0
+    const completionTokens = result.usage?.completionTokens || 0
+    const totalTokens =
+      result.usage?.totalTokens || promptTokens + completionTokens
+
+    return {
+      prompt,
+      expectedTool,
+      selectedTool,
+      isCorrect,
+      latencyMs,
+      timestamp: new Date().toISOString(),
+      toolCalled: selectedTool,
+      promptNumber: 1,
+      promptTokens,
+      completionTokens,
+      tokenCount: totalTokens,
+      cumulativeTokens: 0,
+      responseTime: latencyMs,
+      conversationLength: 2, // prompt + response
+    }
+  } catch (error) {
+    const endTime = performance.now()
+    const latencyMs = endTime - startTime
+
+    console.error('Error in runBenchmark:', error)
+
+    return {
+      prompt,
+      expectedTool,
+      selectedTool: null,
+      isCorrect: false,
+      latencyMs,
+      timestamp: new Date().toISOString(),
+      toolCalled: null,
+      promptNumber: 1,
+      promptTokens: 0,
+      completionTokens: 0,
+      tokenCount: 0,
+      cumulativeTokens: 0,
+      responseTime: latencyMs,
+      conversationLength: 2,
+    }
+  }
 }
 
-export async function runBenchmark({
-  config,
-  prompts,
-  mcpTools,
-  onProgress,
-}: RunBenchmarkOptions): Promise<RequestMetrics[]> {
-  const aiSDKTools = convertMCPToolsToAISDK(mcpTools)
-  const metrics: RequestMetrics[] = []
-  const conversationHistory: CoreMessage[] = []
+/**
+ * Run multiple benchmark requests
+ */
+export async function runBenchmarks(params: {
+  prompts: string[]
+  tools: Record<string, Tool>
+  expectedTools: string[]
+  textGeneration: TextGenerationConfig
+  onProgress?: (completed: number, total: number) => void
+}): Promise<RequestMetrics[]> {
+  const { prompts, tools, expectedTools, textGeneration, onProgress } = params
+
+  if (prompts.length !== expectedTools.length) {
+    throw new Error('Prompts and expectedTools arrays must have same length')
+  }
+
+  const results: RequestMetrics[] = []
   let cumulativeTokens = 0
 
-  console.log(`\n🚀 Starting ${config.name} benchmark...\n`)
-
   for (let i = 0; i < prompts.length; i++) {
-    const prompt = prompts[i]
-    console.log(`\n📝 Prompt ${i + 1}/${prompts.length}: ${prompt}`)
-
-    conversationHistory.push({
-      role: 'user',
-      content: prompt,
+    const metrics = await runBenchmark({
+      prompt: prompts[i],
+      tools,
+      expectedTool: expectedTools[i],
+      textGeneration,
     })
 
-    const startTime = Date.now()
-    let toolCalled: string | null = null
+    // Update prompt number and cumulative tokens
+    metrics.promptNumber = i + 1
+    cumulativeTokens += metrics.tokenCount
+    metrics.cumulativeTokens = cumulativeTokens
 
-    const result = await generateText({
-      model: openai(config.model),
-      messages: conversationHistory,
-      tools: aiSDKTools,
-      maxRetries: 3,
-      onStepFinish: async step => {
-        if (step.toolCalls && step.toolCalls.length > 0) {
-          step.toolCalls.forEach(toolCall => {
-            toolCalled = toolCall.toolName
-            console.log(
-              `  🔧 Tool called: ${toolCall.toolName}`,
-              '\n  Input:',
-              JSON.stringify(toolCall.input, null, 2)
-            )
-          })
-        }
-      },
-    })
-
-    const endTime = Date.now()
-    const responseTime = endTime - startTime
-
-    conversationHistory.push({
-      role: 'assistant',
-      content: result.text,
-    })
-
-    const inputTokens = result.usage?.inputTokens || 0
-    const outputTokens = result.usage?.outputTokens || 0
-    const totalTokens = result.usage?.totalTokens || inputTokens + outputTokens
-
-    cumulativeTokens += totalTokens
-
-    const metric: RequestMetrics = {
-      promptNumber: i + 1,
-      prompt,
-      toolCalled,
-      tokenCount: totalTokens,
-      cumulativeTokens,
-      promptTokens: inputTokens,
-      completionTokens: outputTokens,
-      responseTime,
-      conversationLength: conversationHistory.length,
-    }
-    metrics.push(metric)
-
-    console.log(`  ⏱️  Response time: ${responseTime}ms`)
-    console.log(
-      `  💬 Conversation length: ${conversationHistory.length} messages`
-    )
-    console.log(
-      `  📊 Tokens - Input: ${inputTokens}, Output: ${outputTokens}, Total: ${totalTokens}`
-    )
-    console.log(`  📈 Cumulative tokens: ${cumulativeTokens}`)
+    results.push(metrics)
 
     if (onProgress) {
-      onProgress(metric)
+      onProgress(i + 1, prompts.length)
     }
   }
 
-  return metrics
+  return results
+}
+
+/**
+ * Calculate accuracy from metrics
+ */
+export function calculateAccuracy(metrics: RequestMetrics[]): number {
+  if (metrics.length === 0) return 0
+  const correct = metrics.filter(m => m.isCorrect).length
+  return (correct / metrics.length) * 100
+}
+
+/**
+ * Calculate average latency from metrics
+ */
+export function calculateAverageLatency(metrics: RequestMetrics[]): number {
+  if (metrics.length === 0) return 0
+  const total = metrics.reduce((sum, m) => sum + m.latencyMs, 0)
+  return total / metrics.length
 }
