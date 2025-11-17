@@ -20,8 +20,7 @@
     "lint:fix": "eslint packages --ext .ts,.tsx --fix",
     "format": "prettier --write \"./**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"packages/**/*.{ts,tsx,json,md}\"",
-    "benchmark": "pnpm --filter @mcp-rag/benchmarks benchmark",
-    "benchmark:ci": "pnpm --filter @mcp-rag/benchmarks benchmark:ci"
+    "benchmark": "pnpm --filter @mcp-rag/benchmarks benchmark"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

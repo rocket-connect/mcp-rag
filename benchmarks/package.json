@@ -6,7 +6,6 @@
   "scripts": {
     "build": "echo 'no build'",
     "benchmark": "vitest run",
-    "benchmark:ci": "tsx src/utils/ci.ts",
     "typecheck": "tsc --noEmit",
     "test": "echo 'no tests'"
   },

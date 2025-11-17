@@ -10,9 +10,12 @@ import { BENCHMARKS } from './benchmark-config'
 // Global variable to store benchmark results across tests
 const globalBenchmarkMetrics: RequestMetrics[] = []
 
-const BENCHMARK_CONFIG = BENCHMARKS['base-tool-selection']
+const BENCHMARK_CONFIG = BENCHMARKS['delayed-tool-selection']
 
-describe('Base AI SDK Tool Selection', () => {
+// Helper function to add delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+describe('Delayed AI SDK Tool Selection', () => {
   // Export results after all tests complete
   afterAll(() => {
     if (globalBenchmarkMetrics.length > 0) {
@@ -38,8 +41,11 @@ describe('Base AI SDK Tool Selection', () => {
   ]
 
   prompts.forEach((prompt, index) => {
-    it(`should select ${expectedTools[index]} for prompt ${index + 1}`, async () => {
+    it(`should select ${expectedTools[index]} for prompt ${index + 1} (with 1s delay)`, async () => {
       const mcpTools = mockToolsJson.tools as MCPTool[]
+
+      // Add 1 second delay before sending
+      await delay(1000)
 
       const metrics = await runBenchmark({
         config: BENCHMARK_CONFIG,

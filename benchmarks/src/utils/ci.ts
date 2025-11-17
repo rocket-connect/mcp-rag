@@ -1,137 +1,137 @@
-#!/usr/bin/env node
-import { execSync } from 'child_process'
-import { readFileSync, existsSync } from 'fs'
+/* eslint-disable @typescript-eslint/no-var-requires */
+import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import {
-  generateMarkdownReport,
-  saveReport,
-  saveHistoricalReport,
-  BenchmarkResult,
-} from './markdown.js'
+import type { BenchmarkConfig } from '../benchmark-config'
+import type { BenchmarkSummary } from './markdown'
 
-function getGitInfo() {
+/**
+ * Export benchmark summary to file for CI consumption
+ */
+export function saveBenchmarkResults(
+  config: BenchmarkConfig,
+  summary: BenchmarkSummary
+): void {
   try {
-    const commit = execSync('git rev-parse --short HEAD', {
-      encoding: 'utf-8',
-    }).trim()
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
-      encoding: 'utf-8',
-    }).trim()
-    return { commit, branch }
-  } catch {
-    return { commit: undefined, branch: undefined }
+    const resultsDir = join(process.cwd(), 'results', config.id)
+    mkdirSync(resultsDir, { recursive: true })
+
+    const summaryPath = join(resultsDir, 'benchmark-summary.json')
+    writeFileSync(summaryPath, JSON.stringify(summary, null, 2))
+
+    console.log(`\n✅ Saved benchmark summary to ${summaryPath}`)
+
+    // Generate markdown report
+    const markdownReport = generateMarkdownReport(config, summary)
+    const latestReportPath = join(resultsDir, 'latest.md')
+    writeFileSync(latestReportPath, markdownReport)
+
+    console.log(`✅ Saved latest report to ${latestReportPath}`)
+
+    // Save historical report
+    const historyDir = join(resultsDir, 'history')
+    mkdirSync(historyDir, { recursive: true })
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/T/, '-')
+      .replace(/\..+/, '')
+      .replace(/:/g, '-')
+      .split('-')
+      .slice(0, 3)
+      .join('-')
+    const historyPath = join(historyDir, `${timestamp}.md`)
+    writeFileSync(historyPath, markdownReport)
+
+    console.log(`✅ Saved historical report to ${historyPath}`)
+  } catch (error) {
+    console.error('❌ Failed to save benchmark results:', error)
   }
 }
 
-async function runBenchmarks() {
-  console.log('🧪 Running benchmark tests...\n')
+function generateMarkdownReport(
+  config: BenchmarkConfig,
+  summary: BenchmarkSummary
+): string {
+  const timestamp = new Date().toLocaleString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 
-  try {
-    // Set environment variable to export benchmark data
-    process.env.BENCHMARK_EXPORT = 'true'
+  let markdown = `# 🚀 MCP-RAG Multi-Benchmark Report\n\n`
+  markdown += `**Generated:** ${timestamp}\n\n`
+  markdown += `## 📍 Git Information\n\n`
+  markdown += `- **Commit:** \`${getGitCommit()}\`\n`
+  markdown += `- **Branch:** \`${getGitBranch()}\`\n\n`
+  markdown += `## 📊 Overview\n\n`
+  markdown += `**Total Benchmarks:** 1\n\n`
+  markdown += `## 🎯 ${config.name}\n\n`
+  markdown += `> ${config.description}\n\n`
+  markdown += `### 📊 Summary\n\n`
+  markdown += `- **Total Tests:** ${summary.totalTests}\n`
+  markdown += `- **Successful Tests:** ${summary.successfulTests} (${summary.toolCallSuccessRate.toFixed(1)}%)\n`
+  markdown += `- **Failed Tests:** ${summary.failedTests}\n\n`
+  markdown += `### ⚡ Performance\n\n`
+  markdown += `- **Total Response Time:** ${summary.totalResponseTime}ms\n`
+  markdown += `- **Average Response Time:** ${summary.averageResponseTime}ms\n`
+  markdown += `- **Min Response Time:** ${summary.minResponseTime}ms\n`
+  markdown += `- **Max Response Time:** ${summary.maxResponseTime}ms\n\n`
+  markdown += `### 🔢 Token Usage\n\n`
+  markdown += `- **Total Tokens:** ${summary.totalTokens.toLocaleString()}\n`
+  markdown += `- **Prompt Tokens:** ${summary.totalPromptTokens.toLocaleString()}\n`
+  markdown += `- **Completion Tokens:** ${summary.totalCompletionTokens.toLocaleString()}\n`
+  markdown += `- **Average Tokens per Test:** ${summary.averageTokens.toLocaleString()}\n`
+  markdown += `- **Min Tokens:** ${summary.minTokens.toLocaleString()}\n`
+  markdown += `- **Max Tokens:** ${summary.maxTokens.toLocaleString()}\n\n`
+  markdown += `### 📈 Detailed Metrics\n\n`
+  markdown += `| #   | Tool Called       | Prompt Tokens | Completion Tokens | Total Tokens | Cumulative | Response Time | Messages |\n`
+  markdown += `| --- | ----------------- | ------------- | ----------------- | ------------ | ---------- | ------------- | -------- |\n`
 
-    execSync('pnpm vitest run --reporter=verbose', {
-      encoding: 'utf-8',
-      stdio: 'inherit', // Show output in real-time
-      env: {
-        ...process.env,
-        BENCHMARK_EXPORT: 'true',
-      },
+  summary.metrics.forEach(m => {
+    const toolName = m.toolCalled || 'None'
+    markdown += `| ${m.promptNumber}   | ${toolName.padEnd(17)} | ${m.promptTokens.toLocaleString().padStart(13)} | ${m.completionTokens.toLocaleString().padStart(17)} | ${m.tokenCount.toLocaleString().padStart(12)} | ${m.cumulativeTokens.toLocaleString().padStart(10)} | ${m.responseTime.toLocaleString().padStart(13)} ms | ${String(m.conversationLength).padStart(8)} |\n`
+  })
+
+  markdown += `\n### 🔧 Tool Usage\n\n`
+  markdown += `| Tool              | Count |\n`
+  markdown += `| ----------------- | ----- |\n`
+
+  const toolCounts: Record<string, number> = {}
+  summary.metrics.forEach(m => {
+    if (m.toolCalled) {
+      toolCounts[m.toolCalled] = (toolCounts[m.toolCalled] || 0) + 1
+    }
+  })
+
+  Object.entries(toolCounts)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([tool, count]) => {
+      markdown += `| ${tool.padEnd(17)} | ${count}     |\n`
     })
 
-    return true
-  } catch (error: any) {
-    // Vitest might exit with non-zero even on success in some cases
-    console.log(error.stdout || error.message)
+  markdown += `\n---\n\n`
+  markdown += `_Generated by MCP-RAG Benchmark Suite_\n`
 
-    // Check if tests actually passed by looking for success indicators
-    const output = error.stdout || ''
-    if (output.includes('passed') || output.includes('✓')) {
-      return true
-    }
-
-    throw error
-  }
+  return markdown
 }
 
-async function main() {
-  console.log('🤖 Running benchmarks in CI mode...\n')
-
-  const gitInfo = getGitInfo()
-
-  // Run the benchmarks
-  const success = await runBenchmarks()
-
-  if (!success) {
-    throw new Error('Benchmark execution failed')
-  }
-
-  // Wait a bit for file to be written
-  await new Promise(resolve => setTimeout(resolve, 500))
-
-  // Determine the benchmark name from the test file or use a default
-  // For now, we'll use 'base-tool-selection' as default
-  // You can extend this to detect from environment or test file
-  const benchmarkName = process.env.BENCHMARK_NAME || 'base-tool-selection'
-
-  // Read benchmark summary from file
-  const summaryPath = join(
-    process.cwd(),
-    'results',
-    benchmarkName,
-    'benchmark-summary.json'
-  )
-  let summary = undefined
-
-  if (existsSync(summaryPath)) {
-    try {
-      const summaryContent = readFileSync(summaryPath, 'utf-8')
-      summary = JSON.parse(summaryContent)
-
-      console.log('\n✅ Benchmark summary loaded from file')
-      console.log(`   - Total tests: ${summary.totalTests}`)
-      console.log(`   - Successful: ${summary.successfulTests}`)
-      console.log(`   - Metrics collected: ${summary.metrics?.length || 0}`)
-    } catch (error) {
-      console.error('❌ Error reading benchmark summary file:', error)
-    }
-  } else {
-    console.warn(
-      '\n⚠️  Warning: No benchmark summary file found at',
-      summaryPath
-    )
-    console.warn(
-      'This might mean the benchmark test did not complete successfully or BENCHMARK_EXPORT is not set.\n'
-    )
-  }
-
-  const result: BenchmarkResult = {
-    timestamp: new Date().toISOString(),
-    ...gitInfo,
-    summary,
-  }
-
+function getGitCommit(): string {
   try {
-    const report = generateMarkdownReport(result)
-
-    console.log('\n' + '='.repeat(70))
-    console.log('📄 GENERATED REPORT')
-    console.log('='.repeat(70))
-    console.log(report)
-    console.log('='.repeat(70))
-    console.log('\n📝 Saving results...')
-
-    saveReport(report, 'latest.md', benchmarkName)
-    saveHistoricalReport(report, benchmarkName)
-
-    console.log('\n✨ Benchmark complete!')
-  } catch (error) {
-    console.error('❌ Error generating or saving report:', error)
-    throw error
+    const { execSync } = require('child_process')
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    return 'unknown'
   }
 }
 
-main().catch(error => {
-  console.error('❌ Benchmark failed:', error)
-  process.exit(1)
-})
+function getGitBranch(): string {
+  try {
+    const { execSync } = require('child_process')
+    return execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
+  } catch {
+    return 'unknown'
+  }
+}
