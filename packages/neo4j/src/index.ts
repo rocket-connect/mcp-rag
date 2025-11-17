@@ -1,5 +1,6 @@
 import dedent from 'dedent'
 import type { Tool } from 'ai'
+import neo4j from 'neo4j-driver'
 
 export interface CypherStatement {
   cypher: string
@@ -356,7 +357,7 @@ export class CypherBuilder {
         }}
       `,
       params: {
-        dimensions,
+        dimensions: neo4j.int(dimensions),
       },
     }
   }

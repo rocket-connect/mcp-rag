@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CypherBuilder } from '../../src/index'
+import neo4j from 'neo4j-driver'
 
 const toolsetHash = 'search-test-hash'
 const mockVector = Array(1536).fill(0.3)
@@ -146,7 +147,8 @@ describe('CypherBuilder - Vector Search', () => {
       )
       expect(result.cypher).toContain('FOR (t:Tool)')
       expect(result.cypher).toContain('ON t.embedding')
-      expect(result.params.dimensions).toBe(1536)
+
+      expect(result.params.dimensions).toBeInstanceOf(neo4j.Integer)
     })
 
     it('should check vector index statement', () => {

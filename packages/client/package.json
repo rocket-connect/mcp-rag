@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@mcp-rag/neo4j": "workspace:*",
+    "openai": "^6.9.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
