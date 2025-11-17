@@ -12,6 +12,20 @@ MCP RAG indexes your MCP toolset into a graph structure and uses Neo4j-powered v
 
 See our [benchmarks](./benchmarks/latest.md) for performance improvements.
 
+## Benchmarks
+
+MCP RAG sees improvements in both efficiency and performance compared to baseline tool selection, while maintaining the same level of accuracy.
+
+**Benchmark Methodology:** Tests simulate a realistic conversation with 5 sequential prompts, each triggering a different tool as context accumulates—mirroring real-world multi-turn interactions. All tests use the complete toolset from the [GitHub MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) (90+ tools) to represent authentic large-scale tool selection scenarios.
+
+See the proof in the pudding:
+
+**[Base Tool Selection Results](./benchmarks/results/base-tool-selection/latest.md)** - Baseline approach passing all tools to the model.
+
+**[RAG Tool Selection Results](./benchmarks/results/rag-tool-selection/latest.md)** - RAG-powered intelligent filtering with vector search.
+
+**[View Test Suite](./benchmarks/src/rag.test.ts)** - Complete benchmark implementation and test cases.
+
 ## Installation
 
 [![npm version](https://badge.fury.io/js/@mcp-rag%2Fclient.svg)](https://badge.fury.io/js/@mcp-rag%2Fclient)
@@ -80,12 +94,6 @@ const result = await rag.generateText({
 - **AI SDK compatible** – Drop-in wrapper that works with your existing AI SDK setup
 - **Selective loading** – Only load the tools you need for each request
 
-## Documentation
-
-- [API Reference](./docs/api.md)
-- [Configuration](./docs/configuration.md)
-- [Examples](./examples)
-
 ## License
 
-MIT
+MIT [rconnect.tech](https://www.rconnect.tech)
