@@ -83,6 +83,69 @@ const result = await rag.generateText({
 })
 ```
 
+<details>
+<summary><strong>What does <code>rag.sync()</code> do?</strong></summary>
+
+<br>
+
+The `sync()` method performs a complete synchronization of your tools to Neo4j, creating the graph structure needed for semantic search. Here's what happens under the hood:
+
+1. **Creates Vector Index**: Sets up a Neo4j vector index for similarity search using 1536-dimensional embeddings (OpenAI's `text-embedding-3-small` model)
+
+2. **Generates Embeddings**: For each tool in your toolset, it creates embeddings for:
+   - The tool itself (name + description)
+   - Each parameter (name + description)
+   - The return type
+
+3. **Builds Graph Structure**: Creates a graph in Neo4j with the following relationships:
+   - `ToolSet` nodes that group tools together
+   - `Tool` nodes with their embeddings
+   - `Parameter` nodes connected to tools via `HAS_PARAM` relationships
+   - `ReturnType` nodes connected to tools via `RETURNS` relationships
+
+4. **Idempotent by Design**: The sync process uses `MERGE` operations, so running it multiple times won't create duplicates. It will update existing nodes if the toolset has changed.
+
+**When to call it:**
+
+- After initial client creation (required before first use)
+- After adding or removing tools with `addTool()` or `removeTool()`
+- To force a re-index of your tools
+
+The sync process is optimized to only run when necessary - subsequent calls to `generateText()` won't re-sync unless you explicitly call `sync()` again or modify the toolset.
+
+</details>
+
+<details>
+<summary><strong>What does <code>rag.generateText()</code> do?</strong></summary>
+
+<br>
+
+The `generateText()` method is a smart wrapper around the AI SDK's `generateText` function that adds automatic tool selection. Here's the workflow:
+
+1. **Ensures Migration**: Automatically calls the sync process if tools haven't been indexed yet
+
+2. **Semantic Tool Selection**:
+   - Generates an embedding for your prompt
+   - Performs a Neo4j vector similarity search to find the most relevant tools
+   - By default, selects up to 10 tools (configurable via `maxActiveTools`)
+   - You can override this by passing `activeTools` array explicitly
+
+3. **Calls AI SDK**: Passes only the selected subset of tools to the AI SDK's native `generateText` function along with your prompt and any additional options
+
+4. **Returns Full Result**: Returns the complete AI SDK result wrapped in a `GenerateTextResultWrapper` object, giving you access to:
+   - Tool calls made by the model
+   - Token usage statistics
+   - Response content
+   - All other AI SDK metadata
+
+**Key Benefits:**
+
+- **Reduced Context Size**: Only relevant tools are sent to the LLM, saving tokens
+- **Better Performance**: Fewer tools mean faster response times
+- **Same AI SDK Experience**: Accepts all standard AI SDK parameters and returns familiar result structures
+
+</details>
+
 <div align="center">
   <img src="/docs/example-tools-model.png" alt="Tools Select Model" width="80%" />
 </div>
