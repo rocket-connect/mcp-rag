@@ -5,9 +5,7 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
   "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
-  WITH toolset
-  MERGE (toolset:ToolSet {hash: $toolset_hash})
-SET toolset.updatedAt = datetime()",
+  WITH toolset",
   "params": {
     "tool_count": 0,
     "toolset_hash": "migration-test-hash",
@@ -21,9 +19,7 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
   WITH toolset
-  MERGE (toolset:ToolSet {hash: $toolset_hash})
-SET toolset.updatedAt = datetime()
-CREATE (tool:Tool {id: randomUUID()})
+  CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
 tool.description = $t0_tool_description,
 tool.embedding = $t0_tool_embedding,
@@ -81,9 +77,7 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
   WITH toolset
-  MERGE (toolset:ToolSet {hash: $toolset_hash})
-SET toolset.updatedAt = datetime()
-CREATE (tool:Tool {id: randomUUID()})
+  CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
 tool.description = $t0_tool_description,
 tool.embedding = $t0_tool_embedding,

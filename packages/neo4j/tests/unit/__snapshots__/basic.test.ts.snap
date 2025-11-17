@@ -2,9 +2,7 @@
 
 exports[`CypherBuilder - Basic Operations > createDecomposedTool > should create cypher for single tool with embeddings > single-tool-creation 1`] = `
 {
-  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
-SET toolset.updatedAt = datetime()
-CREATE (tool:Tool {id: randomUUID()})
+  "cypher": "CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $tool_name,
     tool.description = $tool_description,
     tool.embedding = $tool_embedding,
@@ -50,16 +48,13 @@ MERGE (tool)-[:RETURNS]->(returnType)",
     "param1_type": "number",
     "tool_description": "A test tool for searching",
     "tool_name": "searchTool",
-    "toolset_hash": "test-toolset-hash",
   },
 }
 `;
 
 exports[`CypherBuilder - Basic Operations > createDecomposedTools > should create cypher for multiple tools > multiple-tools-creation 1`] = `
 {
-  "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
-SET toolset.updatedAt = datetime()
-CREATE (tool:Tool {id: randomUUID()})
+  "cypher": "CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
     tool.description = $t0_tool_description,
     tool.embedding = $t0_tool_embedding,
@@ -162,9 +157,7 @@ exports[`CypherBuilder - Basic Operations > migrate/sync > should create migrati
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
   WITH toolset
-  MERGE (toolset:ToolSet {hash: $toolset_hash})
-SET toolset.updatedAt = datetime()
-CREATE (tool:Tool {id: randomUUID()})
+  CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
 tool.description = $t0_tool_description,
 tool.embedding = $t0_tool_embedding,

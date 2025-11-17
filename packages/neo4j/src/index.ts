@@ -120,12 +120,6 @@ export class CypherBuilder {
     const statements: string[] = []
     const params: Record<string, any> = {}
 
-    params.toolset_hash = this.toolsetHash
-    statements.push(dedent`
-      MERGE (toolset:ToolSet {hash: $toolset_hash})
-      SET toolset.updatedAt = datetime()
-    `)
-
     params.tool_name = name
     params.tool_description = tool.description || ''
     params.tool_embedding = embeddings.tool
@@ -204,10 +198,10 @@ export class CypherBuilder {
     const allParams: Record<string, any> = {}
 
     // Create toolset once at the beginning
-    statements.push(dedent`
-      MERGE (toolset:ToolSet {hash: $toolset_hash})
-      SET toolset.updatedAt = datetime()
-    `)
+    // statements.push(dedent`
+    //   MERGE (toolset:ToolSet {hash: $toolset_hash})
+    //   SET toolset.updatedAt = datetime()
+    // `)
     allParams.toolset_hash = this.toolsetHash
 
     tools.forEach((toolInput, toolIdx) => {

@@ -63,8 +63,24 @@ describe('Neo4j Integration Tests', () => {
       },
     ]
 
+    // Manually create the toolset first
+    await session.run(
+      `MERGE (toolset:ToolSet {hash: $toolset_hash})
+       SET toolset.updatedAt = datetime()`,
+      { toolset_hash: 'test-integration-hash' }
+    )
+
     // Generate cypher using CypherBuilder instance method
-    const { cypher, params } = builder.createDecomposedTools({ tools })
+    const { cypher: originalCypher, params } = builder.createDecomposedTools({
+      tools,
+    })
+
+    // Prepend toolset matching to make it available in context
+    const cypher = `
+      MATCH (toolset:ToolSet {hash: $toolset_hash})
+      WITH toolset
+      ${originalCypher}
+    `
 
     // Execute the cypher
     await session.run(cypher, params)
@@ -123,8 +139,24 @@ describe('Neo4j Integration Tests', () => {
       },
     ]
 
+    // Manually create the toolset first
+    await session.run(
+      `MERGE (toolset:ToolSet {hash: $toolset_hash})
+       SET toolset.updatedAt = datetime()`,
+      { toolset_hash: 'test-integration-hash' }
+    )
+
     // Generate cypher using CypherBuilder instance method
-    const { cypher, params } = builder.createDecomposedTools({ tools })
+    const { cypher: originalCypher, params } = builder.createDecomposedTools({
+      tools,
+    })
+
+    // Prepend toolset matching to make it available in context
+    const cypher = `
+      MATCH (toolset:ToolSet {hash: $toolset_hash})
+      WITH toolset
+      ${originalCypher}
+    `
 
     // Execute twice
     await session.run(cypher, params)
@@ -182,8 +214,24 @@ describe('Neo4j Integration Tests', () => {
       },
     ]
 
+    // Manually create the toolset first
+    await session.run(
+      `MERGE (toolset:ToolSet {hash: $toolset_hash})
+       SET toolset.updatedAt = datetime()`,
+      { toolset_hash: 'test-integration-hash' }
+    )
+
     // Generate cypher using CypherBuilder instance method
-    const { cypher, params } = builder.createDecomposedTools({ tools })
+    const { cypher: originalCypher, params } = builder.createDecomposedTools({
+      tools,
+    })
+
+    // Prepend toolset matching to make it available in context
+    const cypher = `
+      MATCH (toolset:ToolSet {hash: $toolset_hash})
+      WITH toolset
+      ${originalCypher}
+    `
 
     // Execute the cypher
     await session.run(cypher, params)
@@ -263,9 +311,25 @@ describe('Neo4j Integration Tests', () => {
       },
     ]
 
+    // Manually create the toolset first
+    await session.run(
+      `MERGE (toolset:ToolSet {hash: $toolset_hash})
+       SET toolset.updatedAt = datetime()`,
+      { toolset_hash: 'test-integration-hash' }
+    )
+
     // Generate cypher using CypherBuilder instance method
     // @ts-ignore
-    const { cypher, params } = builder.createDecomposedTools({ tools })
+    const { cypher: originalCypher, params } = builder.createDecomposedTools({
+      tools,
+    })
+
+    // Prepend toolset matching to make it available in context
+    const cypher = `
+      MATCH (toolset:ToolSet {hash: $toolset_hash})
+      WITH toolset
+      ${originalCypher}
+    `
 
     // Execute the cypher
     await session.run(cypher, params)
