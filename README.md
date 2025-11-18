@@ -16,7 +16,7 @@ MCP RAG indexes your MCP toolset into a graph structure and uses Neo4j-powered v
 
 MCP RAG sees improvements in both efficiency and performance compared to baseline tool selection, while maintaining the same level of accuracy.
 
-**Benchmark Methodology:** Tests simulate a realistic conversation with 5 sequential prompts, each triggering a different tool as context accumulates—mirroring real-world multi-turn interactions. All tests use the complete toolset from the [GitHub MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) (90+ tools) to represent authentic large-scale tool selection scenarios.
+**Benchmark Methodology:** Tests simulate a realistic conversation with 5 sequential prompts, each triggering a different tool as context accumulates—mirroring real-world multi-turn interactions. All tests use the complete toolset from the GitHub MCP Server (90+ tools) to represent authentic large-scale tool selection scenarios.
 
 See the proof in the pudding:
 
