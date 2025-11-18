@@ -1,6 +1,6 @@
 /* eslint-disable no-extra-semi */
 import { describe, it, beforeAll, afterAll } from 'vitest'
-import mockToolsJson from '../mock-tools-github.json'
+import mockToolsJson from '../../examples/github/mock-tools-github.json'
 import neo4j, { Driver } from 'neo4j-driver'
 import { runBenchmark, type RequestMetrics } from './utils/run'
 import type { MCPTool } from './utils/test-utils'

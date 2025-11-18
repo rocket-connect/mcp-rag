@@ -1,28 +1,12 @@
 import { tool } from 'ai'
 import { jsonSchema } from 'ai'
 
-/**
- * GitHub tools imported from benchmarks/mock-tools-github.json
- * These tools are converted from MCP format to AI SDK format
- */
-
-// Note: In a real implementation, you would import from:
-// import mockToolsJson from '../../benchmarks/mock-tools-github.json'
-// const mcpTools = mockToolsJson.tools as MCPTool[]
-// Then convert using convertMCPToolsToAISDK(mcpTools)
-
-// For this example, we're using the mock implementation directly
-// which matches the structure in mock-tools-github.json
-
 interface MCPTool {
   name: string
   description?: string
   inputSchema: any
 }
 
-/**
- * Get mock response for tool execution
- */
 function getMockResponse(toolName: string, params: any): any {
   const responses: Record<string, any> = {
     get_file_contents: {
@@ -84,9 +68,6 @@ Mock file contents retrieved for: ${params.owner}/${params.repo}/${params.path}`
   return responses[toolName] || { success: true, message: 'Mock response' }
 }
 
-/**
- * Clean schema properties recursively
- */
 function cleanSchemaProperties(
   properties: Record<string, any>
 ): Record<string, any> {
@@ -197,10 +178,6 @@ function normalizeSchema(schema: any): any {
   return normalized
 }
 
-/**
- * Convert MCP tools to AI SDK compatible format
- * This matches the pattern used in benchmarks/src/utils/test-utils.ts
- */
 export function convertMCPToolsToAISDK(
   mcpTools: MCPTool[]
 ): Record<string, any> {
@@ -369,5 +346,4 @@ const githubMCPTools: MCPTool[] = [
   },
 ]
 
-// Convert and export the GitHub tools in AI SDK format
 export const githubTools = convertMCPToolsToAISDK(githubMCPTools)
