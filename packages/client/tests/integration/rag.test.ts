@@ -5,57 +5,6 @@ import neo4j, { Driver } from 'neo4j-driver'
 import { tool } from 'ai'
 import { z } from 'zod'
 
-/**
- * Helper function to wait for vector index to be fully populated
- */
-async function waitForIndexPopulation(
-  driver: Driver,
-  indexName: string,
-  maxWaitMs: number = 30000
-): Promise<void> {
-  const startTime = Date.now()
-  const session = driver.session()
-
-  try {
-    while (Date.now() - startTime < maxWaitMs) {
-      const result = await session.run(
-        `
-        SHOW VECTOR INDEXES
-        YIELD name, state, populationPercent
-        WHERE name = $indexName
-        RETURN name, state, populationPercent
-        `,
-        { indexName }
-      )
-
-      if (result.records.length > 0) {
-        const record = result.records[0]
-        const state = record.get('state')
-        const populationPercent = record.get('populationPercent')
-
-        if (state === 'ONLINE' && populationPercent === 100.0) {
-          console.log(
-            `✅ Vector index '${indexName}' is ready (state: ${state}, population: ${populationPercent}%)`
-          )
-          return
-        }
-
-        console.log(
-          `⏳ Waiting for index '${indexName}' (state: ${state}, population: ${populationPercent}%)`
-        )
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-
-    throw new Error(
-      `Vector index ${indexName} did not populate within ${maxWaitMs}ms`
-    )
-  } finally {
-    await session.close()
-  }
-}
-
 describe('MCP RAG Integration Tests', () => {
   let driver: Driver
   let rag: ReturnType<typeof createMCPRag>
@@ -134,8 +83,7 @@ describe('MCP RAG Integration Tests', () => {
       maxActiveTools: 10,
     })
 
-    await rag.sync()
-    await waitForIndexPopulation(driver, 'tool_vector_index')
+    await rag.sync({ waitForIndex: true })
   })
 
   afterAll(async () => {
@@ -221,8 +169,7 @@ describe('MCP RAG Integration Tests', () => {
     const tools = rag.getTools()
     expect(tools['calculate']).toBeDefined()
 
-    await rag.sync()
-    await waitForIndexPopulation(driver, 'tool_vector_index')
+    await rag.sync({ waitForIndex: true })
 
     const result = await rag.generateText({
       prompt: 'What is 2 + 2?',
@@ -261,8 +208,7 @@ describe('MCP RAG Integration Tests', () => {
       maxActiveTools: 1,
     })
 
-    await limitedRag.sync()
-    await waitForIndexPopulation(driver, 'tool_vector_index')
+    await limitedRag.sync({ waitForIndex: true })
 
     const result = await limitedRag.generateText({
       prompt: 'Use the tools',

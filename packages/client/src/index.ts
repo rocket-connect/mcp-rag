@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { generateText, streamText, Tool } from 'ai'
+import { generateText, Tool } from 'ai'
 import { CypherBuilder } from '@mcp-rag/neo4j'
 import createDebug from 'debug'
 import {
@@ -7,7 +7,6 @@ import {
   MCPRagClient,
   GenerateTextOptions,
   GenerateTextResultWrapper,
-  StreamOptions,
 } from './types'
 
 const debug = createDebug('@mcp-rag/client')
@@ -87,6 +86,58 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       hash = hash & hash
     }
     return `toolset-${Math.abs(hash).toString(16)}`
+  }
+
+  /**
+   * Wait for vector index to be fully populated
+   */
+  async function waitForIndexPopulation(
+    indexName: string,
+    maxWaitMs: number = 30000
+  ): Promise<void> {
+    const startTime = Date.now()
+    const session = driver.session()
+
+    try {
+      while (Date.now() - startTime < maxWaitMs) {
+        const checkStatement = CypherBuilder.checkVectorIndex({ indexName })
+        const result = await session.run(
+          checkStatement.cypher,
+          checkStatement.params
+        )
+
+        if (result.records.length > 0) {
+          const record = result.records[0]
+          const state = record.get('state')
+          const populationPercent = record.get('populationPercent')
+
+          if (state === 'ONLINE' && populationPercent === 100.0) {
+            debug(
+              'Vector index "%s" is ready (state: %s, population: %s%%)',
+              indexName,
+              state,
+              populationPercent
+            )
+            return
+          }
+
+          debug(
+            'Waiting for index "%s" (state: %s, population: %s%%)',
+            indexName,
+            state,
+            populationPercent
+          )
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+
+      throw new Error(
+        `Vector index ${indexName} did not populate within ${maxWaitMs}ms`
+      )
+    } finally {
+      await session.close()
+    }
   }
 
   /**
@@ -295,12 +346,16 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       await ensureMigrated()
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { prompt, activeTools, metadata, ...restOptions } = options
+      const { prompt, messages, activeTools, metadata, ...restOptions } =
+        options
 
       debugGenerate('Prompt: "%s"', prompt)
+      debugGenerate('Messages: %O', messages)
       debugGenerate('Active tools override: %O', activeTools)
 
       // Determine which tools to use
+      const promptText =
+        prompt || (messages?.[messages.length - 1] as any)?.content || ''
       const selectedTools = activeTools
         ? activeTools.filter(name => {
             const has = toolRegistry.has(name)
@@ -309,7 +364,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
             }
             return has
           })
-        : await selectActiveTools(prompt, maxActiveTools)
+        : await selectActiveTools(promptText, maxActiveTools)
 
       debug('Using %d tools for generation', selectedTools.length)
 
@@ -325,12 +380,28 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
 
       // Call AI SDK's generateText with proper typing
       debugGenerate('Calling AI SDK generateText')
-      const result = await generateText({
-        model,
-        prompt,
-        tools: activeToolSet,
+
+      // Build the request based on whether we have prompt or messages
+      const generateTextArgs = {
         ...restOptions,
-      })
+        model,
+        tools: activeToolSet,
+      }
+
+      let result
+      if (prompt) {
+        result = await generateText({
+          ...generateTextArgs,
+          prompt,
+        })
+      } else if (messages) {
+        result = await generateText({
+          ...generateTextArgs,
+          messages,
+        })
+      } else {
+        throw new Error('Either prompt or messages must be provided')
+      }
 
       debugGenerate('Generation completed')
       debugGenerate('Response length: %d chars', result.text.length)
@@ -346,62 +417,22 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       }
     },
 
-    async *stream(options: StreamOptions): AsyncGenerator<string> {
-      debugGenerate('stream called')
-      await ensureMigrated()
+    async sync(
+      options: { waitForIndex?: boolean; maxWaitMs?: number } = {}
+    ): Promise<void> {
+      const { waitForIndex = true, maxWaitMs = 30000 } = options
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { prompt, activeTools, metadata, ...restOptions } = options
-
-      debugGenerate('Prompt: "%s"', prompt)
-      debugGenerate('Active tools override: %O', activeTools)
-
-      // Determine which tools to use
-      const selectedTools = activeTools
-        ? activeTools.filter(name => {
-            const has = toolRegistry.has(name)
-            if (!has) {
-              debugTools('Warning: requested tool "%s" not found', name)
-            }
-            return has
-          })
-        : await selectActiveTools(prompt, maxActiveTools)
-
-      debug('Using %d tools for streaming', selectedTools.length)
-
-      // Build active tool set
-      const activeToolSet: Record<string, Tool> = {}
-      for (const name of selectedTools) {
-        const tool = toolRegistry.get(name)
-        if (tool) {
-          activeToolSet[name] = tool
-          debugTools('Added tool to active set: %s', name)
-        }
-      }
-
-      // Call AI SDK's streamText
-      debugGenerate('Calling AI SDK streamText')
-      const stream = await streamText({
-        model,
-        prompt,
-        tools: activeToolSet,
-        ...restOptions,
-      })
-
-      // Stream the text
-      let chunkCount = 0
-      for await (const chunk of stream.textStream) {
-        chunkCount++
-        debugGenerate('Streaming chunk %d: %d chars', chunkCount, chunk.length)
-        yield chunk
-      }
-      debugGenerate('Stream completed: %d total chunks', chunkCount)
-    },
-
-    async sync(): Promise<void> {
       debug('sync() called - forcing re-migration')
       migrated = false // Force re-migration
       await ensureMigrated()
+
+      if (waitForIndex) {
+        debug('Waiting for index population (maxWaitMs: %d)', maxWaitMs)
+        await waitForIndexPopulation('tool_vector_index', maxWaitMs)
+      } else {
+        debug('Skipping index wait (waitForIndex=false)')
+      }
+
       debug('sync() completed')
     },
 

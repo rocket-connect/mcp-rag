@@ -18,57 +18,6 @@ const globalBenchmarkMetrics: RequestMetrics[] = []
 const BENCHMARK_CONFIG = BENCHMARKS['rag-tool-selection']
 
 /**
- * Helper function to wait for vector index to be fully populated
- */
-async function waitForIndexPopulation(
-  driver: Driver,
-  indexName: string,
-  maxWaitMs: number = 30000
-): Promise<void> {
-  const startTime = Date.now()
-  const session = driver.session()
-
-  try {
-    while (Date.now() - startTime < maxWaitMs) {
-      const result = await session.run(
-        `
-        SHOW VECTOR INDEXES
-        YIELD name, state, populationPercent
-        WHERE name = $indexName
-        RETURN name, state, populationPercent
-        `,
-        { indexName }
-      )
-
-      if (result.records.length > 0) {
-        const record = result.records[0]
-        const state = record.get('state')
-        const populationPercent = record.get('populationPercent')
-
-        if (state === 'ONLINE' && populationPercent === 100.0) {
-          console.log(
-            `✅ Vector index '${indexName}' is ready (state: ${state}, population: ${populationPercent}%)`
-          )
-          return
-        }
-
-        console.log(
-          `⏳ Waiting for index '${indexName}' (state: ${state}, population: ${populationPercent}%)`
-        )
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-
-    throw new Error(
-      `Vector index ${indexName} did not populate within ${maxWaitMs}ms`
-    )
-  } finally {
-    await session.close()
-  }
-}
-
-/**
  * Create text generation config that uses MCP-RAG client with Neo4j
  */
 function createRAGTextGenerationConfig(
@@ -135,12 +84,9 @@ describe('RAG Tool Selection Benchmark', () => {
       tools: allAISDKTools,
     })
 
-    // Connect the client
-    await mcpRagClient.sync()
-    console.log('✅ MCP-RAG client connected')
-
-    // Wait for vector index to be populated
-    await waitForIndexPopulation(driver, 'tool_vector_index', 60000)
+    // Connect the client and wait for index population
+    await mcpRagClient.sync({ waitForIndex: true, maxWaitMs: 60000 })
+    console.log('✅ MCP-RAG client connected and index ready')
 
     // Create text generation config
     textGenerationConfig = createRAGTextGenerationConfig(mcpRagClient)
