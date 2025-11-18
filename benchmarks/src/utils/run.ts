@@ -9,7 +9,6 @@ export interface RequestMetrics {
   isCorrect: boolean
   latencyMs: number
   timestamp: string
-  // Additional properties for benchmark reporting
   toolCalled: string | null
   promptNumber: number
   promptTokens: number
@@ -20,9 +19,6 @@ export interface RequestMetrics {
   conversationLength: number
 }
 
-/**
- * Run a single benchmark request
- */
 export async function runBenchmark(params: {
   prompt: string
   tools: Record<string, Tool>
@@ -46,7 +42,6 @@ export async function runBenchmark(params: {
     const selectedTool = result.toolCalls[0]?.toolName || null
     const isCorrect = selectedTool === expectedTool
 
-    // ✅ FIXED: Extract token usage from the result
     const promptTokens = result.usage?.promptTokens || 0
     const completionTokens = result.usage?.completionTokens || 0
     const totalTokens =

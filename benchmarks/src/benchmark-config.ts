@@ -82,9 +82,28 @@ export const BENCHMARKS: Record<string, BenchmarkConfig> = {
   },
 }
 
-/**
- * Helper to create a default text generation config using Vercel AI SDK
- */
+export interface GenerateTextResult {
+  toolCalls: Array<{ toolName: string; [key: string]: any }>
+  totalUsage: {
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+  }
+}
+
+export function extractBenchmarkMetrics(result: GenerateTextResult) {
+  return {
+    toolCalls: result.toolCalls.map(call => ({
+      toolName: call.toolName,
+    })),
+    usage: {
+      promptTokens: result.totalUsage.inputTokens || 0,
+      completionTokens: result.totalUsage.outputTokens || 0,
+      totalTokens: result.totalUsage.totalTokens || 0,
+    },
+  }
+}
+
 export function createDefaultTextGeneration(): TextGenerationConfig {
   return {
     generateText: async ({ prompt, tools, model }) => {
@@ -94,16 +113,8 @@ export function createDefaultTextGeneration(): TextGenerationConfig {
         tools,
       })
 
-      return {
-        toolCalls: result.toolCalls.map(call => ({
-          toolName: call.toolName,
-        })),
-        usage: {
-          promptTokens: result.totalUsage.inputTokens!,
-          completionTokens: result.totalUsage.outputTokens!,
-          totalTokens: result.totalUsage.totalTokens!,
-        },
-      }
+      // Use consolidated extraction
+      return extractBenchmarkMetrics(result)
     },
     model: openai('gpt-4o-mini'),
   }
