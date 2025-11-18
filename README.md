@@ -1,5 +1,7 @@
 # MCP RAG
 
+[![npm version](https://badge.fury.io/js/@mcp-rag%2Fclient.svg)](https://badge.fury.io/js/@mcp-rag%2Fclient) [![CI](https://github.com/rocket-connect/mcp-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/rocket-connect/mcp-rag/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A lightweight wrapper around AI SDK that intelligently indexes and retrieves MCP tools using graph-based vector search.
 
 <div align="center">

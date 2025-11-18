@@ -159,9 +159,3 @@ You can modify `src/index.ts` to:
 - **Neo4j connection failed**: Make sure Neo4j is running and credentials are correct
 - **OpenAI API errors**: Verify your API key is valid and has sufficient credits
 - **Tool sync taking long**: First run takes longer as it generates embeddings for all 93 tools
-
-## Learn More
-
-- [MCP RAG Documentation](../../README.md)
-- [GitHub MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/github)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
