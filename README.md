@@ -3,7 +3,7 @@
 A lightweight wrapper around AI SDK that intelligently indexes and retrieves MCP tools using graph-based vector search.
 
 <div align="center">
-  <img src="/docs/neo4j-model.png" alt="Neo4j Model" width="80%" />
+  <img src="/docs/neo4j-model.png" alt="Neo4j Model" width="60%" />
 </div>
 
 ## What It Does
@@ -147,8 +147,29 @@ The `generateText()` method is a smart wrapper around the AI SDK's `generateText
 </details>
 
 <div align="center">
-  <img src="/docs/example-tools-model.png" alt="Tools Select Model" width="80%" />
+  <img src="/docs/example-tools-model.png" alt="Tools Select Model" width="60%" />
 </div>
+
+## Examples
+
+### GitHub MCP Server Demo
+
+Want to see MCP RAG in action? Check out our complete example that demonstrates intelligent tool selection with the GitHub MCP Server's 93 tools:
+
+**[📖 View GitHub Example →](./examples/github/README.md)**
+
+<div align="center">
+  <img src="/docs/neo4j-browser-tools.png" alt="GitHub Tools in Neo4j Browser" width="60%" />
+</div>
+
+This example shows:
+
+- How to mock and index all 93 GitHub MCP server tools
+- Vector similarity search selecting the top 10 most relevant tools
+- Real-world tool selection with detailed debug output
+- Interactive testing with different prompts
+
+Perfect for understanding how MCP RAG reduces context overhead in large toolsets!
 
 ## Features
 

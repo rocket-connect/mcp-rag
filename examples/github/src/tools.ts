@@ -1,5 +1,6 @@
 import { tool } from 'ai'
 import { jsonSchema } from 'ai'
+import mockToolsJson from '../mock-tools-github.json'
 
 interface MCPTool {
   name: string
@@ -207,143 +208,8 @@ export function convertMCPToolsToAISDK(
   return tools
 }
 
-// Define the GitHub tools as MCP tools
-const githubMCPTools: MCPTool[] = [
-  {
-    name: 'get_file_contents',
-    description:
-      'Retrieves the contents of a file or directory from a GitHub repository',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        owner: {
-          type: 'string',
-          description: 'Repository owner (username or organization)',
-        },
-        repo: {
-          type: 'string',
-          description: 'Repository name',
-        },
-        path: {
-          type: 'string',
-          description: 'Path to the file or directory',
-        },
-        branch: {
-          type: 'string',
-          description: 'Branch name (defaults to main branch)',
-        },
-      },
-      required: ['owner', 'repo', 'path'],
-    },
-  },
-  {
-    name: 'get_pull_request',
-    description: 'Retrieves details of a specific pull request',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        owner: {
-          type: 'string',
-          description: 'Repository owner',
-        },
-        repo: {
-          type: 'string',
-          description: 'Repository name',
-        },
-        pull_number: {
-          type: 'number',
-          description: 'Pull request number',
-        },
-      },
-      required: ['owner', 'repo', 'pull_number'],
-    },
-  },
-  {
-    name: 'list_issues',
-    description: 'Lists issues in a repository with optional filters',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        owner: {
-          type: 'string',
-          description: 'Repository owner',
-        },
-        repo: {
-          type: 'string',
-          description: 'Repository name',
-        },
-        state: {
-          type: 'string',
-          description: 'Filter by state',
-          enum: ['open', 'closed', 'all'],
-        },
-        labels: {
-          type: 'string',
-          description: 'Comma-separated list of labels',
-        },
-      },
-      required: ['owner', 'repo'],
-    },
-  },
-  {
-    name: 'create_issue',
-    description: 'Creates a new issue in a repository',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        owner: {
-          type: 'string',
-          description: 'Repository owner',
-        },
-        repo: {
-          type: 'string',
-          description: 'Repository name',
-        },
-        title: {
-          type: 'string',
-          description: 'Issue title',
-        },
-        body: {
-          type: 'string',
-          description: 'Issue body/description',
-        },
-        labels: {
-          type: 'array',
-          description: 'Array of label names to add',
-          items: {
-            type: 'string',
-          },
-        },
-      },
-      required: ['owner', 'repo', 'title'],
-    },
-  },
-  {
-    name: 'add_issue_comment',
-    description: 'Adds a comment to an existing issue',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        owner: {
-          type: 'string',
-          description: 'Repository owner',
-        },
-        repo: {
-          type: 'string',
-          description: 'Repository name',
-        },
-        issue_number: {
-          type: 'number',
-          description: 'Issue number',
-        },
-        body: {
-          type: 'string',
-          description: 'Comment body/text',
-        },
-      },
-      required: ['owner', 'repo', 'issue_number', 'body'],
-    },
-  },
-]
+// Load GitHub tools from the JSON file (same as benchmarks)
+const githubMCPTools = mockToolsJson.tools as MCPTool[]
 
+// Convert MCP tools to AI SDK format
 export const githubTools = convertMCPToolsToAISDK(githubMCPTools)

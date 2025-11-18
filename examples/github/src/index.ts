@@ -3,6 +3,10 @@ import { openai } from '@ai-sdk/openai'
 import * as neo4j from './neo4j'
 import { githubTools } from './tools'
 
+// Change this with DEBUG=@mcp-rag/* pnpm start to see query and tools selected
+const PROMPT =
+  'Get the contents of the README.md file from the main branch in rocket-connect/mcp-rag'
+
 async function main() {
   try {
     await neo4j.connect()
@@ -21,8 +25,7 @@ async function main() {
 
     // Wrapper fetches tools from graph relevant to your query
     const result = await rag.generateText({
-      prompt:
-        'Get the contents of the README.md file from the main branch in rocket-connect/mcp-rag',
+      prompt: PROMPT,
     })
 
     console.log('\n📊 Results:')
