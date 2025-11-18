@@ -10,8 +10,6 @@ A lightweight wrapper around AI SDK that intelligently indexes and retrieves MCP
 
 MCP RAG indexes your MCP toolset into a graph structure and uses Neo4j-powered vector search to retrieve relevant tool subsets from large collections. This dramatically reduces context overhead when working with extensive tool libraries.
 
-See our [benchmarks](./benchmarks/latest.md) for performance improvements.
-
 ## Benchmarks
 
 MCP RAG sees improvements in both efficiency and performance compared to baseline tool selection, while maintaining the same level of accuracy.
