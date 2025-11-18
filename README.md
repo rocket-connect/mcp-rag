@@ -18,7 +18,7 @@ MCP RAG sees improvements in both efficiency and performance compared to baselin
 
 **Benchmark Methodology:** Tests simulate a realistic conversation with 5 sequential prompts, each triggering a different tool as context accumulates—mirroring real-world multi-turn interactions. All tests use the complete toolset from the GitHub MCP Server (90+ tools) to represent authentic large-scale tool selection scenarios.
 
-See the proof in the pudding:
+See the proof in the pudding 🍰:
 
 **[Base Tool Selection Results](./benchmarks/results/base-tool-selection/latest.md)** - Baseline approach passing all tools to the model.
 
