@@ -38,6 +38,8 @@
   },
   "dependencies": {
     "@mcp-rag/neo4j": "workspace:*",
+    "@types/debug": "^4.1.12",
+    "debug": "^4.4.3",
     "openai": "^6.9.0",
     "zod": "^4.1.12"
   },

@@ -1,6 +1,11 @@
 import dedent from 'dedent'
 import type { Tool } from 'ai'
 import neo4j from 'neo4j-driver'
+import createDebug from 'debug'
+
+const debug = createDebug('@mcp-rag/neo4j')
+const debugCypher = createDebug('@mcp-rag/neo4j:cypher')
+const debugParams = createDebug('@mcp-rag/neo4j:params')
 
 export interface CypherStatement {
   cypher: string
@@ -44,6 +49,7 @@ export class CypherBuilder {
 
   constructor(options: { toolsetHash: string }) {
     this.toolsetHash = options.toolsetHash
+    debug('CypherBuilder initialized with toolsetHash: %s', this.toolsetHash)
   }
 
   /**
@@ -62,6 +68,7 @@ export class CypherBuilder {
     }>
   }): CypherStatement {
     const { tools } = options
+    debug('migrate: Starting migration for %d tools', tools.length)
 
     // First create the toolset
     const toolsetStatement = dedent`
@@ -80,13 +87,23 @@ export class CypherBuilder {
       ${toolsResult.cypher}
     `
 
+    const params = {
+      ...toolsResult.params,
+      toolset_hash: this.toolsetHash,
+      tool_count: tools.length,
+    }
+
+    debug(
+      'migrate: Generated migration cypher with %d parameters for %d tools',
+      Object.keys(params).length,
+      tools.length
+    )
+    debugCypher('migrate: Full Cypher statement:\n%s', cypher)
+    debugParams('migrate: Parameters: %O', this._sanitizeParams(params))
+
     return {
       cypher,
-      params: {
-        ...toolsResult.params,
-        toolset_hash: this.toolsetHash,
-        tool_count: tools.length,
-      },
+      params,
     }
   }
 
@@ -104,6 +121,7 @@ export class CypherBuilder {
       }
     }>
   }): CypherStatement {
+    debug('sync: Delegating to migrate()')
     return this.migrate(options)
   }
 
@@ -117,6 +135,8 @@ export class CypherBuilder {
     }
   }): CypherStatement {
     const { name, tool, embeddings } = options
+    debug('createDecomposedTool: Creating tool "%s"', name)
+
     const statements: string[] = []
     const params: Record<string, any> = {}
 
@@ -124,7 +144,7 @@ export class CypherBuilder {
     params.tool_description = tool.description || ''
     params.tool_embedding = embeddings.tool
 
-    statements.push(dedent`
+    const toolStatement = dedent`
       CREATE (tool:Tool {id: randomUUID()})
       SET tool.name = $tool_name,
           tool.description = $tool_description,
@@ -132,11 +152,18 @@ export class CypherBuilder {
           tool.updatedAt = datetime()
       WITH toolset, tool
       MERGE (toolset)-[:HAS_TOOL]->(tool)
-    `)
+    `
+    statements.push(toolStatement)
 
     const schema = tool.inputSchema as any
     const parameters = schema?.properties || {}
     const required = schema?.required || []
+
+    debug(
+      'createDecomposedTool: Tool "%s" has %d parameters',
+      name,
+      Object.keys(parameters).length
+    )
 
     Object.entries(parameters).forEach(
       ([paramName, paramDef]: [string, any], idx) => {
@@ -148,7 +175,7 @@ export class CypherBuilder {
         params[`${paramPrefix}_required`] = required.includes(paramName)
         params[`${paramPrefix}_embedding`] = embeddings.parameters[paramName]
 
-        statements.push(dedent`
+        const paramStatement = dedent`
         CREATE (param${idx}:Parameter {id: randomUUID()})
         SET param${idx}.name = $${paramPrefix}_name,
             param${idx}.toolId = tool.id,
@@ -159,11 +186,12 @@ export class CypherBuilder {
             param${idx}.updatedAt = datetime()
         WITH toolset, tool, param${idx}
         MERGE (tool)-[:HAS_PARAM]->(param${idx})
-      `)
+      `
+        statements.push(paramStatement)
       }
     )
 
-    statements.push(dedent`
+    const returnStatement = dedent`
       CREATE (returnType:ReturnType {id: randomUUID()})
       SET returnType.toolId = tool.id,
           returnType.type = 'object',
@@ -172,12 +200,27 @@ export class CypherBuilder {
           returnType.updatedAt = datetime()
       WITH toolset, tool, returnType
       MERGE (tool)-[:RETURNS]->(returnType)
-    `)
+    `
+    statements.push(returnStatement)
 
     params.return_embedding = embeddings.returnType
 
+    const cypher = statements.join('\n')
+
+    debug(
+      'createDecomposedTool: Tool "%s" generated %d statements',
+      name,
+      statements.length
+    )
+    debugCypher('createDecomposedTool: Tool "%s" Cypher:\n%s', name, cypher)
+    debugParams(
+      'createDecomposedTool: Tool "%s" params: %O',
+      name,
+      this._sanitizeParams(params)
+    )
+
     return {
-      cypher: statements.join('\n'),
+      cypher,
       params,
     }
   }
@@ -194,6 +237,8 @@ export class CypherBuilder {
     }>
   }): CypherStatement {
     const { tools } = options
+    debug('createDecomposedTools: Creating %d decomposed tools', tools.length)
+
     const statements: string[] = []
     const allParams: Record<string, any> = {}
 
@@ -205,6 +250,13 @@ export class CypherBuilder {
     allParams.toolset_hash = this.toolsetHash
 
     tools.forEach((toolInput, toolIdx) => {
+      debug(
+        'createDecomposedTools: Processing tool %d/%d: "%s"',
+        toolIdx + 1,
+        tools.length,
+        toolInput.name
+      )
+
       const result = this.createDecomposedTool({
         name: toolInput.name,
         tool: toolInput.tool,
@@ -241,8 +293,21 @@ export class CypherBuilder {
       statements.push(prefixedCypher)
     })
 
+    const cypher = statements.join('\n')
+
+    debug(
+      'createDecomposedTools: Generated %d statements with %d total parameters',
+      statements.length,
+      Object.keys(allParams).length
+    )
+    debugCypher('createDecomposedTools: Combined Cypher:\n%s', cypher)
+    debugParams(
+      'createDecomposedTools: Combined params: %O',
+      this._sanitizeParams(allParams)
+    )
+
     return {
-      cypher: statements.join('\n'),
+      cypher,
       params: allParams,
     }
   }
@@ -255,6 +320,13 @@ export class CypherBuilder {
       depth = 'low',
       minScore = 0.0,
     } = options
+
+    debug(
+      'vectorSearchDecomposed: Searching with depth=%s, limit=%d, minScore=%f',
+      depth,
+      limit,
+      minScore
+    )
 
     let cypher: string
     const params: Record<string, any> = {
@@ -328,6 +400,16 @@ export class CypherBuilder {
       `
     }
 
+    debug('vectorSearchDecomposed: Generated search query for depth=%s', depth)
+    debugCypher('vectorSearchDecomposed: Cypher query:\n%s', cypher)
+    debugParams(
+      'vectorSearchDecomposed: Search params (vector truncated): %O',
+      {
+        ...params,
+        queryVector: `[${vector.length} dimensions]`,
+      }
+    )
+
     return {
       cypher,
       params,
@@ -339,17 +421,27 @@ export class CypherBuilder {
     dimensions: number
   }): CypherStatement {
     const { indexName, dimensions } = options
+    debug(
+      'createVectorIndex: Creating index "%s" with %d dimensions',
+      indexName,
+      dimensions
+    )
+
+    const cypher = dedent`
+      CREATE VECTOR INDEX ${indexName} IF NOT EXISTS
+      FOR (t:Tool)
+      ON t.embedding
+      OPTIONS {indexConfig: {
+        \`vector.dimensions\`: $dimensions,
+        \`vector.similarity_function\`: 'cosine'
+      }}
+    `
+
+    debugCypher('createVectorIndex: Cypher:\n%s', cypher)
+    debugParams('createVectorIndex: Params: %O', { dimensions })
 
     return {
-      cypher: dedent`
-        CREATE VECTOR INDEX ${indexName} IF NOT EXISTS
-        FOR (t:Tool)
-        ON t.embedding
-        OPTIONS {indexConfig: {
-          \`vector.dimensions\`: $dimensions,
-          \`vector.similarity_function\`: 'cosine'
-        }}
-      `,
+      cypher,
       params: {
         dimensions: neo4j.int(dimensions),
       },
@@ -358,17 +450,38 @@ export class CypherBuilder {
 
   static checkVectorIndex(options: { indexName: string }): CypherStatement {
     const { indexName } = options
+    debug('checkVectorIndex: Checking status of index "%s"', indexName)
+
+    const cypher = dedent`
+      SHOW VECTOR INDEXES
+      YIELD name, state, populationPercent
+      WHERE name = $indexName
+      RETURN name, state, populationPercent
+    `
+
+    debugCypher('checkVectorIndex: Cypher:\n%s', cypher)
+    debugParams('checkVectorIndex: Params: %O', { indexName })
 
     return {
-      cypher: dedent`
-        SHOW VECTOR INDEXES
-        YIELD name, state, populationPercent
-        WHERE name = $indexName
-        RETURN name, state, populationPercent
-      `,
+      cypher,
       params: {
         indexName,
       },
     }
+  }
+
+  /**
+   * Helper to sanitize parameters for logging (truncates embeddings)
+   */
+  private _sanitizeParams(params: Record<string, any>): Record<string, any> {
+    const sanitized: Record<string, any> = {}
+    for (const [key, value] of Object.entries(params)) {
+      if (key.includes('embedding') && Array.isArray(value)) {
+        sanitized[key] = `[${value.length} dimensions]`
+      } else {
+        sanitized[key] = value
+      }
+    }
+    return sanitized
   }
 }

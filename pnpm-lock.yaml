@@ -77,13 +77,62 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.9
-        version: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
+        version: 4.0.9(@types/debug@4.1.12)(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
+
+  examples/github:
+    dependencies:
+      '@ai-sdk/openai':
+        specifier: ^2.0.65
+        version: 2.0.65(zod@4.1.12)
+      '@ai-sdk/provider-utils':
+        specifier: ^3.0.17
+        version: 3.0.17(zod@4.1.12)
+      '@mcp-rag/client':
+        specifier: workspace:*
+        version: link:../../packages/client
+      ai:
+        specifier: ^5.0.93
+        version: 5.0.93(zod@4.1.12)
+      neo4j-driver:
+        specifier: ^6.0.1
+        version: 6.0.1
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
+    devDependencies:
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.25
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.13.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
+      '@typescript-eslint/parser':
+        specifier: ^6.13.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.3)
+      eslint:
+        specifier: ^8.54.0
+        version: 8.57.1
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.9
+        version: 4.0.9(@types/debug@4.1.12)(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
 
   packages/client:
     dependencies:
       '@mcp-rag/neo4j':
         specifier: workspace:*
         version: link:../neo4j
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3
       openai:
         specifier: ^6.9.0
         version: 6.9.0(zod@4.1.12)
@@ -105,10 +154,16 @@ importers:
         version: 6.0.1
       vitest:
         specifier: ^4.0.9
-        version: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
+        version: 4.0.9(@types/debug@4.1.12)(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
 
   packages/neo4j:
     dependencies:
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
+      debug:
+        specifier: ^4.4.3
+        version: 4.4.3
       dedent:
         specifier: ^1.7.0
         version: 1.7.0
@@ -130,7 +185,7 @@ importers:
         version: 6.0.1
       vitest:
         specifier: ^4.0.9
-        version: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
+        version: 4.0.9(@types/debug@4.1.12)(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
 
 packages:
 
@@ -655,6 +710,9 @@ packages:
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
+  '@types/debug@4.1.12':
+    resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
+
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
@@ -663,6 +721,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/ms@2.1.0':
+    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
   '@types/node@20.19.25':
     resolution: {integrity: sha512-ZsJzA5thDQMSQO788d7IocwwQbI8B5OPzmqNvpf3NY/+MHDAS759Wo0gd2WQeXYt5AAAQjzcrTVC6SKCuYgoCQ==}
@@ -2013,11 +2074,17 @@ snapshots:
       '@types/deep-eql': 4.0.2
       assertion-error: 2.0.1
 
+  '@types/debug@4.1.12':
+    dependencies:
+      '@types/ms': 2.1.0
+
   '@types/deep-eql@4.0.2': {}
 
   '@types/estree@1.0.8': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/ms@2.1.0': {}
 
   '@types/node@20.19.25':
     dependencies:
@@ -2162,7 +2229,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 1.2.0
-      vitest: 4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
+      vitest: 4.0.9(@types/debug@4.1.12)(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6)
 
   '@vitest/utils@2.1.9':
     dependencies:
@@ -2989,7 +3056,7 @@ snapshots:
       fsevents: 2.3.3
       tsx: 4.20.6
 
-  vitest@4.0.9(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6):
+  vitest@4.0.9(@types/debug@4.1.12)(@types/node@20.19.25)(@vitest/ui@2.1.9)(tsx@4.20.6):
     dependencies:
       '@vitest/expect': 4.0.9
       '@vitest/mocker': 4.0.9(vite@7.2.2(@types/node@20.19.25)(tsx@4.20.6))
@@ -3012,6 +3079,7 @@ snapshots:
       vite: 7.2.2(@types/node@20.19.25)(tsx@4.20.6)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@types/debug': 4.1.12
       '@types/node': 20.19.25
       '@vitest/ui': 2.1.9(vitest@4.0.9)
     transitivePeerDependencies:

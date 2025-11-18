@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { generateText, streamText, Tool } from 'ai'
 import { CypherBuilder } from '@mcp-rag/neo4j'
+import createDebug from 'debug'
 import {
   MCPRagConfig,
   MCPRagClient,
@@ -8,6 +9,12 @@ import {
   GenerateTextResultWrapper,
   StreamOptions,
 } from './types'
+
+const debug = createDebug('@mcp-rag/client')
+const debugTools = createDebug('@mcp-rag/client:tools')
+const debugEmbeddings = createDebug('@mcp-rag/client:embeddings')
+const debugNeo4j = createDebug('@mcp-rag/client:neo4j')
+const debugGenerate = createDebug('@mcp-rag/client:generate')
 
 /**
  * Create a new MCP RAG client
@@ -47,11 +54,16 @@ import {
 export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   const { model, neo4j: driver, tools, maxActiveTools = 10, migration } = config
 
+  debug('Creating MCP RAG client with %d tools', Object.keys(tools).length)
+  debugTools('Available tools: %O', Object.keys(tools))
+
   // Internal state
   const toolRegistry = new Map(Object.entries(tools))
 
   // Generate a toolset hash for this instance
   const toolsetHash = generateToolsetHash(Object.keys(tools).sort().join(','))
+  debug('Generated toolset hash: %s', toolsetHash)
+
   const cypherBuilder = new CypherBuilder({ toolsetHash })
 
   // Create OpenAI client for embeddings
@@ -59,6 +71,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     apiKey: process.env.OPENAI_API_KEY || '',
   })
   const embeddingModel = 'text-embedding-3-small'
+  debugEmbeddings('Using embedding model: %s', embeddingModel)
 
   let migrated = false
 
@@ -80,28 +93,48 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
    * Ensure tools are synced to Neo4j
    */
   async function ensureMigrated(): Promise<void> {
-    if (migrated) return
+    if (migrated) {
+      debug('Already migrated, skipping')
+      return
+    }
 
+    debug('Starting migration process')
     const session = driver.session()
     try {
       // Check if we should migrate
       const shouldMigrate = migration?.shouldMigrate || defaultShouldMigrate
-      if (!(await shouldMigrate(session))) {
+      const shouldMigrateResult = await shouldMigrate(session)
+      debug('Should migrate: %s', shouldMigrateResult)
+
+      if (!shouldMigrateResult) {
         migrated = true
+        debug('Migration not needed')
         return
       }
 
       // Create vector index
+      debug('Creating vector index')
       const indexStatement = CypherBuilder.createVectorIndex({
         indexName: 'tool_vector_index',
         dimensions: 1536, // text-embedding-3-small dimensions
       })
+      debugNeo4j('Executing index creation query')
       await session.run(indexStatement.cypher, indexStatement.params)
+      debug('Vector index created successfully')
 
       // Generate embeddings for all tools
+      debug('Generating embeddings for %d tools', toolRegistry.size)
       const toolsWithEmbeddings = await Promise.all(
         Array.from(toolRegistry.entries()).map(async ([name, tool]) => {
+          debugEmbeddings('Generating embeddings for tool: %s', name)
           const embeddings = await generateToolEmbeddings(name, tool)
+          debugEmbeddings(
+            'Generated embeddings for tool "%s": tool=%d dims, %d params, returnType=%d dims',
+            name,
+            embeddings.tool.length,
+            Object.keys(embeddings.parameters).length,
+            embeddings.returnType.length
+          )
           return {
             name,
             tool,
@@ -112,8 +145,10 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
 
       // Use custom migration if provided, otherwise use default
       if (migration?.migrate) {
+        debug('Using custom migration function')
         await migration.migrate(session, Object.fromEntries(toolRegistry))
       } else {
+        debug('Using default migration (CypherBuilder.migrate)')
         // Use CypherBuilder.migrate() for the full migration
         const statement = cypherBuilder.migrate({
           tools: toolsWithEmbeddings,
@@ -122,23 +157,34 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
         // Apply onBeforeMigrate hook if provided
         let statements = [statement]
         if (migration?.onBeforeMigrate) {
+          debug('Applying onBeforeMigrate hook')
           statements = await migration.onBeforeMigrate(statements)
+          debug('Hook returned %d statements', statements.length)
         }
 
-        for (const stmt of statements) {
+        debugNeo4j('Executing %d migration statements', statements.length)
+        for (const [idx, stmt] of statements.entries()) {
+          debugNeo4j('Executing statement %d/%d', idx + 1, statements.length)
           await session.run(stmt.cypher, stmt.params)
         }
+        debug('Migration completed successfully')
       }
 
       migrated = true
+    } catch (error) {
+      debug('Migration failed: %O', error)
+      throw error
     } finally {
       await session.close()
     }
   }
 
   async function defaultShouldMigrate(session: any): Promise<boolean> {
+    debugNeo4j('Checking if migration is needed')
     const result = await session.run('MATCH (t:Tool) RETURN count(t) as count')
-    return result.records[0].get('count').toInt() === 0
+    const count = result.records[0].get('count').toInt()
+    debugNeo4j('Found %d existing tools in database', count)
+    return count === 0
   }
 
   async function generateToolEmbeddings(
@@ -150,6 +196,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     returnType: number[]
   }> {
     const toolText = `${name}: ${tool.description || ''}`
+    debugEmbeddings('Embedding tool text: "%s"', toolText)
     const toolEmbedding = await generateEmbedding(toolText)
 
     // Extract schema from AI SDK tool
@@ -157,12 +204,20 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       (tool.inputSchema as any)?.jsonSchema || (tool.inputSchema as any) || {}
     const parameters = schema.properties || {}
 
+    debugEmbeddings(
+      'Tool "%s" has %d parameters to embed',
+      name,
+      Object.keys(parameters).length
+    )
+
     const parameterEmbeddings: Record<string, number[]> = {}
     for (const [paramName, paramDef] of Object.entries(parameters)) {
       const paramText = `${paramName}: ${(paramDef as any).description || ''}`
+      debugEmbeddings('Embedding parameter "%s": "%s"', paramName, paramText)
       parameterEmbeddings[paramName] = await generateEmbedding(paramText)
     }
 
+    debugEmbeddings('Embedding return type for tool "%s"', name)
     const returnTypeEmbedding = await generateEmbedding('Tool execution result')
 
     return {
@@ -173,11 +228,14 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   }
 
   async function generateEmbedding(text: string): Promise<number[]> {
+    debugEmbeddings('Calling OpenAI API for embedding')
     const response = await openai.embeddings.create({
       model: embeddingModel,
       input: text,
     })
-    return response.data[0].embedding
+    const embedding = response.data[0].embedding
+    debugEmbeddings('Received embedding with %d dimensions', embedding.length)
+    return embedding
   }
 
   /**
@@ -187,12 +245,17 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     prompt: string,
     maxTools: number
   ): Promise<string[]> {
+    debug('Selecting active tools for prompt (max: %d)', maxTools)
+    debugTools('Prompt: "%s"', prompt)
+
     const session = driver.session()
     try {
       // Generate embedding for the prompt
+      debugEmbeddings('Generating embedding for prompt')
       const queryVector = await generateEmbedding(prompt)
 
       // Use CypherBuilder.vectorSearchDecomposed for semantic search
+      debugNeo4j('Executing vector search')
       const statement = cypherBuilder.vectorSearchDecomposed({
         vector: queryVector,
         limit: maxTools,
@@ -201,8 +264,24 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       })
 
       const result = await session.run(statement.cypher, statement.params)
+      const selectedTools = result.records.map(record => record.get('name'))
 
-      return result.records.map(record => record.get('name'))
+      debug('Selected %d tools', selectedTools.length)
+      debugTools('Selected tools: %O', selectedTools)
+
+      // Log relevance scores
+      result.records.forEach(record => {
+        debugTools(
+          'Tool "%s" relevance: %f',
+          record.get('name'),
+          record.get('relevance')
+        )
+      })
+
+      return selectedTools
+    } catch (error) {
+      debug('Tool selection failed: %O', error)
+      throw error
     } finally {
       await session.close()
     }
@@ -212,15 +291,27 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     async generateText(
       options: GenerateTextOptions
     ): Promise<GenerateTextResultWrapper> {
+      debugGenerate('generateText called')
       await ensureMigrated()
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { prompt, activeTools, metadata, ...restOptions } = options
 
+      debugGenerate('Prompt: "%s"', prompt)
+      debugGenerate('Active tools override: %O', activeTools)
+
       // Determine which tools to use
       const selectedTools = activeTools
-        ? activeTools.filter(name => toolRegistry.has(name))
+        ? activeTools.filter(name => {
+            const has = toolRegistry.has(name)
+            if (!has) {
+              debugTools('Warning: requested tool "%s" not found', name)
+            }
+            return has
+          })
         : await selectActiveTools(prompt, maxActiveTools)
+
+      debug('Using %d tools for generation', selectedTools.length)
 
       // Build active tool set
       const activeToolSet: Record<string, Tool> = {}
@@ -228,10 +319,12 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
         const tool = toolRegistry.get(name)
         if (tool) {
           activeToolSet[name] = tool
+          debugTools('Added tool to active set: %s', name)
         }
       }
 
       // Call AI SDK's generateText with proper typing
+      debugGenerate('Calling AI SDK generateText')
       const result = await generateText({
         model,
         prompt,
@@ -239,21 +332,42 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
         ...restOptions,
       })
 
+      debugGenerate('Generation completed')
+      debugGenerate('Response length: %d chars', result.text.length)
+      if (result.toolCalls?.length) {
+        debugGenerate('Tool calls made: %d', result.toolCalls.length)
+        result.toolCalls.forEach(call => {
+          debugTools('Tool called: %s', call.toolName)
+        })
+      }
+
       return {
         result,
       }
     },
 
     async *stream(options: StreamOptions): AsyncGenerator<string> {
+      debugGenerate('stream called')
       await ensureMigrated()
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { prompt, activeTools, metadata, ...restOptions } = options
 
+      debugGenerate('Prompt: "%s"', prompt)
+      debugGenerate('Active tools override: %O', activeTools)
+
       // Determine which tools to use
       const selectedTools = activeTools
-        ? activeTools.filter(name => toolRegistry.has(name))
+        ? activeTools.filter(name => {
+            const has = toolRegistry.has(name)
+            if (!has) {
+              debugTools('Warning: requested tool "%s" not found', name)
+            }
+            return has
+          })
         : await selectActiveTools(prompt, maxActiveTools)
+
+      debug('Using %d tools for streaming', selectedTools.length)
 
       // Build active tool set
       const activeToolSet: Record<string, Tool> = {}
@@ -261,10 +375,12 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
         const tool = toolRegistry.get(name)
         if (tool) {
           activeToolSet[name] = tool
+          debugTools('Added tool to active set: %s', name)
         }
       }
 
       // Call AI SDK's streamText
+      debugGenerate('Calling AI SDK streamText')
       const stream = await streamText({
         model,
         prompt,
@@ -273,27 +389,46 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       })
 
       // Stream the text
+      let chunkCount = 0
       for await (const chunk of stream.textStream) {
+        chunkCount++
+        debugGenerate('Streaming chunk %d: %d chars', chunkCount, chunk.length)
         yield chunk
       }
+      debugGenerate('Stream completed: %d total chunks', chunkCount)
     },
 
     async sync(): Promise<void> {
+      debug('sync() called - forcing re-migration')
       migrated = false // Force re-migration
       await ensureMigrated()
+      debug('sync() completed')
     },
 
     addTool(name: string, tool: Tool): void {
+      debug('Adding tool: %s', name)
       toolRegistry.set(name, tool)
       migrated = false // Force re-migration on next call
+      debugTools('Tool "%s" added. Total tools: %d', name, toolRegistry.size)
     },
 
     removeTool(name: string): void {
-      toolRegistry.delete(name)
-      migrated = false // Force re-migration on next call
+      debug('Removing tool: %s', name)
+      const existed = toolRegistry.delete(name)
+      if (existed) {
+        migrated = false // Force re-migration on next call
+        debugTools(
+          'Tool "%s" removed. Total tools: %d',
+          name,
+          toolRegistry.size
+        )
+      } else {
+        debugTools('Tool "%s" not found, nothing removed', name)
+      }
     },
 
     getTools(): Record<string, Tool> {
+      debug('getTools() called')
       return Object.fromEntries(toolRegistry)
     },
   }

@@ -1,0 +1,373 @@
+import { tool } from 'ai'
+import { jsonSchema } from 'ai'
+
+/**
+ * GitHub tools imported from benchmarks/mock-tools-github.json
+ * These tools are converted from MCP format to AI SDK format
+ */
+
+// Note: In a real implementation, you would import from:
+// import mockToolsJson from '../../benchmarks/mock-tools-github.json'
+// const mcpTools = mockToolsJson.tools as MCPTool[]
+// Then convert using convertMCPToolsToAISDK(mcpTools)
+
+// For this example, we're using the mock implementation directly
+// which matches the structure in mock-tools-github.json
+
+interface MCPTool {
+  name: string
+  description?: string
+  inputSchema: any
+}
+
+/**
+ * Get mock response for tool execution
+ */
+function getMockResponse(toolName: string, params: any): any {
+  const responses: Record<string, any> = {
+    get_file_contents: {
+      content: `# MCP-RAG
+
+A Retrieval-Augmented Generation (RAG) system for Model Context Protocol (MCP) tools.
+
+## Features
+- 🔍 Vector search for intelligent tool selection
+- 🗄️ Neo4j graph database integration
+- 🤖 OpenAI embeddings support
+- 📊 Comprehensive benchmarking suite
+
+Mock file contents retrieved for: ${params.owner}/${params.repo}/${params.path}`,
+      path: params.path,
+      sha: 'abc123def456',
+      size: 1234,
+      type: 'file',
+    },
+    get_pull_request: {
+      number: params.pull_number,
+      title: `Mock PR #${params.pull_number}`,
+      body: 'This is a mock pull request for demonstration purposes',
+      state: 'open',
+      user: { login: 'mock-user' },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    list_issues: [
+      {
+        number: 1,
+        title: 'Example issue 1',
+        state: 'open',
+        labels: [{ name: 'bug' }],
+        created_at: new Date().toISOString(),
+      },
+      {
+        number: 2,
+        title: 'Example issue 2',
+        state: 'open',
+        labels: [{ name: 'enhancement' }],
+        created_at: new Date().toISOString(),
+      },
+    ],
+    create_issue: {
+      number: 42,
+      title: params.title,
+      body: params.body || '',
+      state: 'open',
+      created_at: new Date().toISOString(),
+      html_url: `https://github.com/${params.owner}/${params.repo}/issues/42`,
+    },
+    add_issue_comment: {
+      id: 123,
+      body: params.body,
+    },
+  }
+
+  return responses[toolName] || { success: true, message: 'Mock response' }
+}
+
+/**
+ * Clean schema properties recursively
+ */
+function cleanSchemaProperties(
+  properties: Record<string, any>
+): Record<string, any> {
+  const cleaned: Record<string, any> = {}
+
+  for (const [key, value] of Object.entries(properties)) {
+    if (!value || typeof value !== 'object') {
+      continue
+    }
+
+    const prop = { ...value }
+
+    // Handle type field
+    if (!prop.type || prop.type === null || prop.type === undefined) {
+      console.warn(`  ⚠️  Property "${key}" missing type, defaulting to string`)
+      prop.type = 'string'
+    } else if (
+      typeof prop.type === 'string' &&
+      prop.type.toLowerCase() === 'none'
+    ) {
+      console.warn(
+        `  ⚠️  Property "${key}" has invalid type "None", defaulting to string`
+      )
+      prop.type = 'string'
+    }
+
+    // Recursively clean nested objects
+    if (prop.type === 'object' && prop.properties) {
+      prop.properties = cleanSchemaProperties(prop.properties)
+    }
+
+    // Recursively clean array items
+    if (prop.type === 'array' && prop.items) {
+      if (prop.items.properties) {
+        prop.items.properties = cleanSchemaProperties(prop.items.properties)
+      }
+      if (!prop.items.type || prop.items.type === null) {
+        prop.items.type = 'string'
+      }
+    }
+
+    cleaned[key] = prop
+  }
+
+  return cleaned
+}
+
+/**
+ * Normalize JSON Schema to ensure it's valid
+ */
+function normalizeSchema(schema: any): any {
+  if (!schema) {
+    return {
+      type: 'object',
+      properties: {},
+    }
+  }
+
+  const normalized = JSON.parse(JSON.stringify(schema))
+
+  if (
+    !normalized.type ||
+    normalized.type === null ||
+    normalized.type === undefined
+  ) {
+    if (normalized.properties) {
+      normalized.type = 'object'
+    } else {
+      return {
+        type: 'object',
+        properties: {},
+      }
+    }
+  }
+
+  const validTypes = [
+    'object',
+    'array',
+    'string',
+    'number',
+    'boolean',
+    'null',
+    'integer',
+  ]
+  if (normalized.type && !validTypes.includes(normalized.type.toLowerCase())) {
+    return {
+      type: 'object',
+      properties: {},
+    }
+  }
+
+  if (normalized.type !== 'object') {
+    return {
+      type: 'object',
+      properties: {
+        value: normalized,
+      },
+      required: ['value'],
+    }
+  }
+
+  if (normalized.properties) {
+    normalized.properties = cleanSchemaProperties(normalized.properties)
+  } else {
+    normalized.properties = {}
+  }
+
+  return normalized
+}
+
+/**
+ * Convert MCP tools to AI SDK compatible format
+ * This matches the pattern used in benchmarks/src/utils/test-utils.ts
+ */
+export function convertMCPToolsToAISDK(
+  mcpTools: MCPTool[]
+): Record<string, any> {
+  const tools: Record<string, any> = {}
+
+  for (const mcpTool of mcpTools) {
+    try {
+      const normalizedSchema = normalizeSchema(mcpTool.inputSchema)
+
+      tools[mcpTool.name] = tool({
+        description: mcpTool.description || `Tool: ${mcpTool.name}`,
+        inputSchema: jsonSchema(normalizedSchema),
+        execute: async (params: any) => {
+          const actualParams =
+            mcpTool.inputSchema?.type !== 'object' && params.value
+              ? params.value
+              : params
+          return getMockResponse(mcpTool.name, actualParams)
+        },
+      })
+    } catch (error) {
+      console.error(`  ❌ Error converting tool ${mcpTool.name}:`, error)
+      throw error
+    }
+  }
+
+  return tools
+}
+
+// Define the GitHub tools as MCP tools
+const githubMCPTools: MCPTool[] = [
+  {
+    name: 'get_file_contents',
+    description:
+      'Retrieves the contents of a file or directory from a GitHub repository',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        owner: {
+          type: 'string',
+          description: 'Repository owner (username or organization)',
+        },
+        repo: {
+          type: 'string',
+          description: 'Repository name',
+        },
+        path: {
+          type: 'string',
+          description: 'Path to the file or directory',
+        },
+        branch: {
+          type: 'string',
+          description: 'Branch name (defaults to main branch)',
+        },
+      },
+      required: ['owner', 'repo', 'path'],
+    },
+  },
+  {
+    name: 'get_pull_request',
+    description: 'Retrieves details of a specific pull request',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        owner: {
+          type: 'string',
+          description: 'Repository owner',
+        },
+        repo: {
+          type: 'string',
+          description: 'Repository name',
+        },
+        pull_number: {
+          type: 'number',
+          description: 'Pull request number',
+        },
+      },
+      required: ['owner', 'repo', 'pull_number'],
+    },
+  },
+  {
+    name: 'list_issues',
+    description: 'Lists issues in a repository with optional filters',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        owner: {
+          type: 'string',
+          description: 'Repository owner',
+        },
+        repo: {
+          type: 'string',
+          description: 'Repository name',
+        },
+        state: {
+          type: 'string',
+          description: 'Filter by state',
+          enum: ['open', 'closed', 'all'],
+        },
+        labels: {
+          type: 'string',
+          description: 'Comma-separated list of labels',
+        },
+      },
+      required: ['owner', 'repo'],
+    },
+  },
+  {
+    name: 'create_issue',
+    description: 'Creates a new issue in a repository',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        owner: {
+          type: 'string',
+          description: 'Repository owner',
+        },
+        repo: {
+          type: 'string',
+          description: 'Repository name',
+        },
+        title: {
+          type: 'string',
+          description: 'Issue title',
+        },
+        body: {
+          type: 'string',
+          description: 'Issue body/description',
+        },
+        labels: {
+          type: 'array',
+          description: 'Array of label names to add',
+          items: {
+            type: 'string',
+          },
+        },
+      },
+      required: ['owner', 'repo', 'title'],
+    },
+  },
+  {
+    name: 'add_issue_comment',
+    description: 'Adds a comment to an existing issue',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        owner: {
+          type: 'string',
+          description: 'Repository owner',
+        },
+        repo: {
+          type: 'string',
+          description: 'Repository name',
+        },
+        issue_number: {
+          type: 'number',
+          description: 'Issue number',
+        },
+        body: {
+          type: 'string',
+          description: 'Comment body/text',
+        },
+      },
+      required: ['owner', 'repo', 'issue_number', 'body'],
+    },
+  },
+]
+
+// Convert and export the GitHub tools in AI SDK format
+export const githubTools = convertMCPToolsToAISDK(githubMCPTools)

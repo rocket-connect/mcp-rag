@@ -1,0 +1,30 @@
+{
+  "name": "@mcp-rag/example-github",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx ./src/index.ts",
+    "build": "echo 'no build'",
+    "benchmark": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests'"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.9"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.65",
+    "@ai-sdk/provider-utils": "^3.0.17",
+    "@mcp-rag/client": "workspace:*",
+    "ai": "^5.0.93",
+    "neo4j-driver": "^6.0.1",
+    "zod": "^4.1.12"
+  }
+}
