@@ -1,10 +1,10 @@
 # 🚀 MCP-RAG Multi-Benchmark Report
 
-**Generated:** 11/18/2025, 06:59:14 AM
+**Generated:** 11/18/2025, 07:52:08 AM
 
 ## 📍 Git Information
 
-- **Commit:** `761cc1f`
+- **Commit:** `c836347`
 - **Branch:** `main`
 
 ## 📊 Overview
@@ -23,10 +23,10 @@
 
 ### ⚡ Performance
 
-- **Total Response Time:** 8321.647590000002ms
-- **Average Response Time:** 1664ms
-- **Min Response Time:** 1031.7778840000028ms
-- **Max Response Time:** 2830.1976990000003ms
+- **Total Response Time:** 8709.500317000002ms
+- **Average Response Time:** 1742ms
+- **Min Response Time:** 1532.3388159999995ms
+- **Max Response Time:** 2189.7667370000017ms
 
 ### 🔢 Token Usage
 
@@ -41,11 +41,11 @@
 
 | #                                                                                              | Tool Called       | Prompt Tokens | Completion Tokens | Total Tokens | Cumulative | Response Time | Messages |
 | ---------------------------------------------------------------------------------------------- | ----------------- | ------------- | ----------------- | ------------ | ---------- | ------------- | -------- |
-| Get pull request #42 from rocket-connect/mcp-rag                                               | get_pull_request  | 756           | 29                | 785          | 0          | 1,774.181 ms  | 2        |
-| List all open issues in the repository rocket-connect/mcp-rag                                  | list_issues       | 1,281         | 28                | 1,309        | 0          | 2,830.198 ms  | 2        |
-| Create a new issue in rocket-connect/mcp-rag with title "Test Issue" and body "This is a test" | create_issue      | 1,053         | 35                | 1,088        | 0          | 1,217.213 ms  | 2        |
-| Get the contents of the README.md file from the main branch in rocket-connect/mcp-rag          | get_file_contents | 762           | 33                | 795          | 0          | 1,031.778 ms  | 2        |
-| Add a comment to issue #1 in rocket-connect/mcp-rag saying "This is a test comment"            | add_issue_comment | 1,150         | 37                | 1,187        | 0          | 1,468.278 ms  | 2        |
+| Get pull request #42 from rocket-connect/mcp-rag                                               | get_pull_request  | 756           | 29                | 785          | 0          | 1,658.898 ms  | 2        |
+| List all open issues in the repository rocket-connect/mcp-rag                                  | list_issues       | 1,281         | 28                | 1,309        | 0          | 1,652.523 ms  | 2        |
+| Create a new issue in rocket-connect/mcp-rag with title "Test Issue" and body "This is a test" | create_issue      | 1,053         | 35                | 1,088        | 0          | 1,675.974 ms  | 2        |
+| Get the contents of the README.md file from the main branch in rocket-connect/mcp-rag          | get_file_contents | 762           | 33                | 795          | 0          | 2,189.767 ms  | 2        |
+| Add a comment to issue #1 in rocket-connect/mcp-rag saying "This is a test comment"            | add_issue_comment | 1,150         | 37                | 1,187        | 0          | 1,532.339 ms  | 2        |
 
 ### 🔧 Tool Usage
 
