@@ -55,7 +55,7 @@ const driver = neo4j.driver(
 )
 
 const rag = createMCPRag({
-  model: openai('gpt-4'),
+  model: openai('gpt-4o-mini'),
   neo4j: driver,
   tools: {
     searchDocs: tool({

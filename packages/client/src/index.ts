@@ -35,7 +35,7 @@ const debugGenerate = createDebug('@mcp-rag/client:generate')
  * )
  *
  * const rag = createMCPRag({
- *   model: openai('gpt-4'),
+ *   model: openai('gpt-4o-mini'),
  *   neo4j: driver,
  *   tools: {
  *     searchDocs: tool({
