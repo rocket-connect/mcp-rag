@@ -1,11 +1,75 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`CypherBuilder - Migration > deleteToolsetByHash > should generate cypher to delete toolset and all related nodes > delete-toolset-by-hash 1`] = `
+{
+  "cypher": "MATCH (toolset:ToolSet {hash: $toolset_hash})
+OPTIONAL MATCH (toolset)-[:HAS_TOOL]->(tool:Tool)
+OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)
+WITH toolset,
+     collect(DISTINCT tool) AS tools,
+     collect(DISTINCT param) AS params,
+     collect(DISTINCT returnType) AS returnTypes
+WITH toolset, tools, params, returnTypes,
+     1 AS toolsetCount,
+     size(tools) AS toolCount,
+     size(params) AS paramCount,
+     size(returnTypes) AS returnTypeCount
+FOREACH (t IN tools | DETACH DELETE t)
+FOREACH (p IN params | DETACH DELETE p)
+FOREACH (r IN returnTypes | DETACH DELETE r)
+DETACH DELETE toolset
+RETURN
+  toolsetCount AS deletedToolsets,
+  toolCount AS deletedTools,
+  paramCount AS deletedParams,
+  returnTypeCount AS deletedReturnTypes",
+  "params": {
+    "toolset_hash": "migration-test-hash",
+  },
+}
+`;
+
+exports[`CypherBuilder - Migration > getToolsetByHash > should generate cypher to get toolset with all related nodes > get-toolset-by-hash 1`] = `
+{
+  "cypher": "MATCH (toolset:ToolSet {hash: $toolset_hash})
+OPTIONAL MATCH (toolset)-[:HAS_TOOL]->(tool:Tool)
+OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)
+WITH toolset, tool,
+     collect(DISTINCT {
+       name: param.name,
+       type: param.type,
+       description: param.description,
+       required: param.required
+     }) AS params,
+     returnType
+WITH toolset, collect(DISTINCT CASE WHEN tool IS NOT NULL THEN {
+  name: tool.name,
+  description: tool.description,
+  parameters: params,
+  returnType: {
+    type: returnType.type,
+    description: returnType.description
+  }
+} END) AS tools
+RETURN
+  toolset.hash AS hash,
+  toolset.updatedAt AS updatedAt,
+  toolset.toolCount AS toolCount,
+  [t IN tools WHERE t IS NOT NULL] AS tools",
+  "params": {
+    "toolset_hash": "migration-test-hash",
+  },
+}
+`;
+
 exports[`CypherBuilder - Migration > migrate with multiple tools > should create complete migration for empty toolset > empty-migration 1`] = `
 {
   "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
-  WITH toolset",
+      RETURN toolset",
   "params": {
     "tool_count": 0,
     "toolset_hash": "migration-test-hash",
@@ -18,8 +82,8 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
   "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
-  WITH toolset
-  CREATE (tool:Tool {id: randomUUID()})
+      WITH toolset
+      CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
 tool.description = $t0_tool_description,
 tool.embedding = $t0_tool_embedding,
@@ -76,8 +140,8 @@ exports[`CypherBuilder - Migration > migrate with multiple tools > should create
   "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
-  WITH toolset
-  CREATE (tool:Tool {id: randomUUID()})
+      WITH toolset
+      CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
 tool.description = $t0_tool_description,
 tool.embedding = $t0_tool_embedding,

@@ -221,4 +221,90 @@ describe('CypherBuilder - Migration', () => {
       expect(result.cypher).toContain('toolset.toolCount = $tool_count')
     })
   })
+
+  describe('getToolsetByHash', () => {
+    it('should generate cypher to get toolset with all related nodes', () => {
+      const builder = new CypherBuilder({ toolsetHash })
+      const result = builder.getToolsetByHash()
+
+      expect(result).toMatchSnapshot('get-toolset-by-hash')
+      expect(result.cypher).toContain(
+        'MATCH (toolset:ToolSet {hash: $toolset_hash})'
+      )
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (toolset)-[:HAS_TOOL]->(tool:Tool)'
+      )
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)'
+      )
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)'
+      )
+      expect(result.params.toolset_hash).toBe(toolsetHash)
+    })
+
+    it('should return toolset metadata fields', () => {
+      const builder = new CypherBuilder({ toolsetHash })
+      const result = builder.getToolsetByHash()
+
+      expect(result.cypher).toContain('toolset.hash AS hash')
+      expect(result.cypher).toContain('toolset.updatedAt AS updatedAt')
+      expect(result.cypher).toContain('toolset.toolCount AS toolCount')
+      expect(result.cypher).toContain('tools')
+    })
+
+    it('should collect tool structure with parameters and return types', () => {
+      const builder = new CypherBuilder({ toolsetHash })
+      const result = builder.getToolsetByHash()
+
+      expect(result.cypher).toContain('name: tool.name')
+      expect(result.cypher).toContain('description: tool.description')
+      expect(result.cypher).toContain('parameters: params')
+      expect(result.cypher).toContain('returnType:')
+    })
+  })
+
+  describe('deleteToolsetByHash', () => {
+    it('should generate cypher to delete toolset and all related nodes', () => {
+      const builder = new CypherBuilder({ toolsetHash })
+      const result = builder.deleteToolsetByHash()
+
+      expect(result).toMatchSnapshot('delete-toolset-by-hash')
+      expect(result.cypher).toContain(
+        'MATCH (toolset:ToolSet {hash: $toolset_hash})'
+      )
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (toolset)-[:HAS_TOOL]->(tool:Tool)'
+      )
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)'
+      )
+      expect(result.cypher).toContain(
+        'OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)'
+      )
+      expect(result.params.toolset_hash).toBe(toolsetHash)
+    })
+
+    it('should use DETACH DELETE via FOREACH for related nodes and direct delete for toolset', () => {
+      const builder = new CypherBuilder({ toolsetHash })
+      const result = builder.deleteToolsetByHash()
+
+      expect(result.cypher).toContain('FOREACH (t IN tools | DETACH DELETE t)')
+      expect(result.cypher).toContain('FOREACH (p IN params | DETACH DELETE p)')
+      expect(result.cypher).toContain(
+        'FOREACH (r IN returnTypes | DETACH DELETE r)'
+      )
+      expect(result.cypher).toContain('DETACH DELETE toolset')
+    })
+
+    it('should return deletion counts for verification', () => {
+      const builder = new CypherBuilder({ toolsetHash })
+      const result = builder.deleteToolsetByHash()
+
+      expect(result.cypher).toContain('deletedToolsets')
+      expect(result.cypher).toContain('deletedTools')
+      expect(result.cypher).toContain('deletedParams')
+      expect(result.cypher).toContain('deletedReturnTypes')
+    })
+  })
 })
