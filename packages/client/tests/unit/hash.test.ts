@@ -11,7 +11,41 @@ const mockTool: Tool = {
   inputSchema: {
     type: 'object',
     properties: {
-      query: { type: 'string' },
+      query: { type: 'string', description: 'The query string' },
+    },
+  },
+}
+
+const mockToolWithDifferentDescription: Tool = {
+  description: 'A different description',
+  // @ts-ignore
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'The query string' },
+    },
+  },
+}
+
+const mockToolWithDifferentParam: Tool = {
+  description: 'A test tool',
+  // @ts-ignore
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'Updated query description' },
+    },
+  },
+}
+
+const mockToolWithExtraParam: Tool = {
+  description: 'A test tool',
+  // @ts-ignore
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'The query string' },
+      limit: { type: 'number', description: 'Max results' },
     },
   },
 }
@@ -51,11 +85,11 @@ describe('Hash Function', () => {
       expect(hash).toMatch(/^custom-\d+$/)
     })
 
-    it('should pass lexicographically sorted tool names to hash function', () => {
+    it('should pass JSON string of sorted tools to hash function', () => {
       let receivedInput = ''
       const customHashFn = vi.fn((input: string) => {
         receivedInput = input
-        return `hash-${input}`
+        return `hash`
       })
       const driver = createMockDriver()
 
@@ -66,14 +100,51 @@ describe('Hash Function', () => {
         tools: {
           zebra: mockTool,
           alpha: mockTool,
-          beta: mockTool,
         },
         openaiApiKey: 'test-key',
         hashFunction: customHashFn,
       })
 
-      // Tools should be sorted lexicographically: alpha, beta, zebra
-      expect(receivedInput).toBe('alpha,beta,zebra')
+      // Should be valid JSON
+      const parsed = JSON.parse(receivedInput)
+
+      // Tools should be sorted lexicographically
+      const keys = Object.keys(parsed)
+      expect(keys).toEqual(['alpha', 'zebra'])
+
+      // Should contain tool definitions
+      expect(parsed.alpha).toHaveProperty('description')
+      expect(parsed.alpha).toHaveProperty('inputSchema')
+      expect(parsed.zebra).toHaveProperty('description')
+      expect(parsed.zebra).toHaveProperty('inputSchema')
+    })
+
+    it('should include full tool schema in hash input', () => {
+      let receivedInput = ''
+      const customHashFn = vi.fn((input: string) => {
+        receivedInput = input
+        return `hash`
+      })
+      const driver = createMockDriver()
+
+      createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockTool },
+        openaiApiKey: 'test-key',
+        hashFunction: customHashFn,
+      })
+
+      const parsed = JSON.parse(receivedInput)
+
+      // Verify full schema is included
+      expect(parsed.myTool.description).toBe('A test tool')
+      expect(parsed.myTool.inputSchema.type).toBe('object')
+      expect(parsed.myTool.inputSchema.properties.query.type).toBe('string')
+      expect(parsed.myTool.inputSchema.properties.query.description).toBe(
+        'The query string'
+      )
     })
 
     it('should return custom hash value from hash function', () => {
@@ -155,13 +226,76 @@ describe('Hash Function', () => {
     })
   })
 
+  describe('hash changes on tool definition changes', () => {
+    it('should produce different hash when tool description changes', () => {
+      const driver = createMockDriver()
+
+      const client1 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockTool },
+        openaiApiKey: 'test-key',
+      })
+
+      const client2 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockToolWithDifferentDescription },
+        openaiApiKey: 'test-key',
+      })
+
+      expect(client1.getToolsetHash()).not.toBe(client2.getToolsetHash())
+    })
+
+    it('should produce different hash when parameter description changes', () => {
+      const driver = createMockDriver()
+
+      const client1 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockTool },
+        openaiApiKey: 'test-key',
+      })
+
+      const client2 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockToolWithDifferentParam },
+        openaiApiKey: 'test-key',
+      })
+
+      expect(client1.getToolsetHash()).not.toBe(client2.getToolsetHash())
+    })
+
+    it('should produce different hash when parameter is added', () => {
+      const driver = createMockDriver()
+
+      const client1 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockTool },
+        openaiApiKey: 'test-key',
+      })
+
+      const client2 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: mockToolWithExtraParam },
+        openaiApiKey: 'test-key',
+      })
+
+      expect(client1.getToolsetHash()).not.toBe(client2.getToolsetHash())
+    })
+  })
+
   describe('hash updates on tool changes', () => {
     it('should update hash when tool is added', () => {
-      const hashCalls: string[] = []
-      const customHashFn = vi.fn((input: string) => {
-        hashCalls.push(input)
-        return `hash-${input.replace(/,/g, '-')}`
-      })
       const driver = createMockDriver()
 
       const client = createMCPRag({
@@ -170,24 +304,18 @@ describe('Hash Function', () => {
         neo4j: driver,
         tools: { alpha: mockTool },
         openaiApiKey: 'test-key',
-        hashFunction: customHashFn,
       })
 
       const initialHash = client.getToolsetHash()
-      expect(initialHash).toBe('hash-alpha')
 
       // Add a new tool
       client.addTool('beta', mockTool)
 
       const newHash = client.getToolsetHash()
-      expect(newHash).toBe('hash-alpha-beta')
       expect(newHash).not.toBe(initialHash)
     })
 
     it('should update hash when tool is removed', () => {
-      const customHashFn = vi.fn(
-        (input: string) => `hash-${input.replace(/,/g, '-')}`
-      )
       const driver = createMockDriver()
 
       const client = createMCPRag({
@@ -196,15 +324,35 @@ describe('Hash Function', () => {
         neo4j: driver,
         tools: { alpha: mockTool, beta: mockTool },
         openaiApiKey: 'test-key',
-        hashFunction: customHashFn,
       })
 
-      expect(client.getToolsetHash()).toBe('hash-alpha-beta')
+      const initialHash = client.getToolsetHash()
 
       // Remove a tool
       client.removeTool('alpha')
 
-      expect(client.getToolsetHash()).toBe('hash-beta')
+      const newHash = client.getToolsetHash()
+      expect(newHash).not.toBe(initialHash)
+    })
+
+    it('should produce same hash after adding and removing same tool', () => {
+      const driver = createMockDriver()
+
+      const client = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { alpha: mockTool },
+        openaiApiKey: 'test-key',
+      })
+
+      const initialHash = client.getToolsetHash()
+
+      // Add then remove
+      client.addTool('beta', mockTool)
+      client.removeTool('beta')
+
+      expect(client.getToolsetHash()).toBe(initialHash)
     })
   })
 

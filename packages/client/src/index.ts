@@ -89,12 +89,34 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   const activeHashFunction = hashFunction || defaultHashFunction
 
   /**
-   * Compute the toolset hash by lexicographically sorting tools and hashing the result
+   * Deep clone a tool object for hashing purposes.
+   * Strips out non-serializable properties like 'execute' functions.
+   */
+  function cloneToolForHashing(tool: Tool): Record<string, unknown> {
+    return {
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+    }
+  }
+
+  /**
+   * Compute the toolset hash by:
+   * 1. Creating a deep clone of all tools (excluding execute functions)
+   * 2. Sorting tools lexicographically by name
+   * 3. Converting to JSON string
+   * 4. Passing to hash function
+   *
+   * This ensures any change to tool definitions (parameters, descriptions, etc.)
+   * will result in a different hash.
    */
   function computeToolsetHash(): string {
-    const sortedToolNames = Array.from(toolRegistry.keys()).sort()
-    const input = sortedToolNames.join(',')
-    return activeHashFunction(input)
+    const toolEntries = Array.from(toolRegistry.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, tool]) => [name, cloneToolForHashing(tool)])
+
+    const sortedToolsObject = Object.fromEntries(toolEntries)
+    const jsonString = JSON.stringify(sortedToolsObject)
+    return activeHashFunction(jsonString)
   }
 
   // Generate initial toolset hash
