@@ -82,7 +82,10 @@ export interface SyncResult {
 
 export interface MCPRagClient {
   generateText(options: GenerateTextOptions): Promise<GenerateTextResultWrapper>
-  sync(options?: { waitForIndex?: boolean; maxWaitMs?: number }): Promise<SyncResult>
+  sync(options?: {
+    waitForIndex?: boolean
+    maxWaitMs?: number
+  }): Promise<SyncResult>
   addTool(name: string, tool: Tool): void
   removeTool(name: string): void
   getTools(): Record<string, Tool>

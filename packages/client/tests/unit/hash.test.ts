@@ -185,7 +185,9 @@ describe('Hash Function', () => {
     })
 
     it('should update hash when tool is removed', () => {
-      const customHashFn = vi.fn((input: string) => `hash-${input.replace(/,/g, '-')}`)
+      const customHashFn = vi.fn(
+        (input: string) => `hash-${input.replace(/,/g, '-')}`
+      )
       const driver = createMockDriver()
 
       const client = createMCPRag({
