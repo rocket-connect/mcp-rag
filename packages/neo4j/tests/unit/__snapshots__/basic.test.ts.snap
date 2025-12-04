@@ -156,8 +156,8 @@ exports[`CypherBuilder - Basic Operations > migrate/sync > should create migrati
   "cypher": "MERGE (toolset:ToolSet {hash: $toolset_hash})
 SET toolset.updatedAt = datetime(),
 toolset.toolCount = $tool_count
-  WITH toolset
-  CREATE (tool:Tool {id: randomUUID()})
+      WITH toolset
+      CREATE (tool:Tool {id: randomUUID()})
 SET tool.name = $t0_tool_name,
 tool.description = $t0_tool_description,
 tool.embedding = $t0_tool_embedding,

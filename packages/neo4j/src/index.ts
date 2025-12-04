@@ -81,11 +81,18 @@ export class CypherBuilder {
     const toolsResult = this.createDecomposedTools({ tools })
 
     // Combine into a single migration
-    const cypher = dedent`
-      ${toolsetStatement}
-      WITH toolset
-      ${toolsResult.cypher}
-    `
+    // If no tools, just return the toolset statement with a RETURN clause
+    const cypher =
+      tools.length === 0
+        ? dedent`
+          ${toolsetStatement}
+          RETURN toolset
+        `
+        : dedent`
+          ${toolsetStatement}
+          WITH toolset
+          ${toolsResult.cypher}
+        `
 
     const params = {
       ...toolsResult.params,
@@ -466,6 +473,104 @@ export class CypherBuilder {
       cypher,
       params: {
         indexName,
+      },
+    }
+  }
+
+  /**
+   * Gets a toolset by its hash, including all tools, parameters, and return types
+   * Returns the toolset metadata and all associated tools with their full structure
+   */
+  getToolsetByHash(): CypherStatement {
+    debug('getToolsetByHash: Getting toolset with hash "%s"', this.toolsetHash)
+
+    const cypher = dedent`
+      MATCH (toolset:ToolSet {hash: $toolset_hash})
+      OPTIONAL MATCH (toolset)-[:HAS_TOOL]->(tool:Tool)
+      OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+      OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)
+      WITH toolset, tool,
+           collect(DISTINCT {
+             name: param.name,
+             type: param.type,
+             description: param.description,
+             required: param.required
+           }) AS params,
+           returnType
+      WITH toolset, collect(DISTINCT CASE WHEN tool IS NOT NULL THEN {
+        name: tool.name,
+        description: tool.description,
+        parameters: params,
+        returnType: {
+          type: returnType.type,
+          description: returnType.description
+        }
+      } END) AS tools
+      RETURN
+        toolset.hash AS hash,
+        toolset.updatedAt AS updatedAt,
+        toolset.toolCount AS toolCount,
+        [t IN tools WHERE t IS NOT NULL] AS tools
+    `
+
+    debugCypher('getToolsetByHash: Cypher:\n%s', cypher)
+    debugParams('getToolsetByHash: Params: %O', {
+      toolset_hash: this.toolsetHash,
+    })
+
+    return {
+      cypher,
+      params: {
+        toolset_hash: this.toolsetHash,
+      },
+    }
+  }
+
+  /**
+   * Deletes a toolset by its hash, including all related tools, parameters, and return types
+   * Uses DETACH DELETE to remove all relationships automatically
+   * Returns count of deleted nodes for verification
+   */
+  deleteToolsetByHash(): CypherStatement {
+    debug(
+      'deleteToolsetByHash: Deleting toolset with hash "%s"',
+      this.toolsetHash
+    )
+
+    const cypher = dedent`
+      MATCH (toolset:ToolSet {hash: $toolset_hash})
+      OPTIONAL MATCH (toolset)-[:HAS_TOOL]->(tool:Tool)
+      OPTIONAL MATCH (tool)-[:HAS_PARAM]->(param:Parameter)
+      OPTIONAL MATCH (tool)-[:RETURNS]->(returnType:ReturnType)
+      WITH toolset,
+           collect(DISTINCT tool) AS tools,
+           collect(DISTINCT param) AS params,
+           collect(DISTINCT returnType) AS returnTypes
+      WITH toolset, tools, params, returnTypes,
+           1 AS toolsetCount,
+           size(tools) AS toolCount,
+           size(params) AS paramCount,
+           size(returnTypes) AS returnTypeCount
+      FOREACH (t IN tools | DETACH DELETE t)
+      FOREACH (p IN params | DETACH DELETE p)
+      FOREACH (r IN returnTypes | DETACH DELETE r)
+      DETACH DELETE toolset
+      RETURN
+        toolsetCount AS deletedToolsets,
+        toolCount AS deletedTools,
+        paramCount AS deletedParams,
+        returnTypeCount AS deletedReturnTypes
+    `
+
+    debugCypher('deleteToolsetByHash: Cypher:\n%s', cypher)
+    debugParams('deleteToolsetByHash: Params: %O', {
+      toolset_hash: this.toolsetHash,
+    })
+
+    return {
+      cypher,
+      params: {
+        toolset_hash: this.toolsetHash,
       },
     }
   }
