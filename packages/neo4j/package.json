@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rag/neo4j",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Neo4j utilities for MCP RAG - Cypher query builder and test assertions for graph-based tool indexing",
   "type": "module",
   "main": "./dist/index.js",

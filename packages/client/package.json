@@ -1,6 +1,6 @@
 {
   "name": "@mcp-rag/client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MCP RAG - Context-aware tool management for AI SDK",
   "type": "module",
   "main": "./dist/index.js",
