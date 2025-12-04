@@ -11,7 +11,7 @@ export interface MCPRagConfig {
   neo4j: Driver
   tools: Record<string, Tool>
   openaiApiKey: string
-  dangerouslyAllowBrowser?: boolean;
+  dangerouslyAllowBrowser?: boolean
   maxActiveTools?: number
   migration?: {
     shouldMigrate?: (session: any) => Promise<boolean>

@@ -77,7 +77,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   // Create OpenAI client for embeddings
   const openai = new OpenAI({
     apiKey: openaiApiKey,
-    dangerouslyAllowBrowser
+    dangerouslyAllowBrowser,
   })
   const embeddingModel = 'text-embedding-3-small'
   debugEmbeddings('Using embedding model: %s', embeddingModel)
