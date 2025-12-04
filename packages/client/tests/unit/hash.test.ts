@@ -9,6 +9,7 @@ const mockTool: Tool = {
   description: 'A test tool',
   // @ts-ignore
   inputSchema: {
+    // @ts-ignore
     type: 'object',
     properties: {
       query: { type: 'string', description: 'The query string' },
@@ -20,6 +21,7 @@ const mockToolWithDifferentDescription: Tool = {
   description: 'A different description',
   // @ts-ignore
   inputSchema: {
+    // @ts-ignore
     type: 'object',
     properties: {
       query: { type: 'string', description: 'The query string' },
@@ -31,6 +33,7 @@ const mockToolWithDifferentParam: Tool = {
   description: 'A test tool',
   // @ts-ignore
   inputSchema: {
+    // @ts-ignore
     type: 'object',
     properties: {
       query: { type: 'string', description: 'Updated query description' },
@@ -42,6 +45,7 @@ const mockToolWithExtraParam: Tool = {
   description: 'A test tool',
   // @ts-ignore
   inputSchema: {
+    // @ts-ignore
     type: 'object',
     properties: {
       query: { type: 'string', description: 'The query string' },
@@ -370,6 +374,158 @@ describe('Hash Function', () => {
       })
 
       expect(client.getToolsetHash()).toBe('static-hash')
+    })
+  })
+
+  describe('deep sorting of nested properties', () => {
+    it('should produce same hash regardless of nested property order', () => {
+      const driver = createMockDriver()
+
+      // Tool with properties in one order
+      const toolPropsOrderA: Tool = {
+        description: 'A test tool',
+        // @ts-ignore
+        inputSchema: {
+          // @ts-ignore
+          type: 'object',
+          properties: {
+            alpha: { type: 'string', description: 'First param' },
+            beta: { type: 'number', description: 'Second param' },
+          },
+        },
+      }
+
+      // Same tool with properties in different order
+      const toolPropsOrderB: Tool = {
+        description: 'A test tool',
+        // @ts-ignore
+        inputSchema: {
+          // @ts-ignore
+          type: 'object',
+          properties: {
+            beta: { type: 'number', description: 'Second param' },
+            alpha: { type: 'string', description: 'First param' },
+          },
+        },
+      }
+
+      const client1 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: toolPropsOrderA },
+        openaiApiKey: 'test-key',
+      })
+
+      const client2 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: toolPropsOrderB },
+        openaiApiKey: 'test-key',
+      })
+
+      // Should produce same hash regardless of property order
+      expect(client1.getToolsetHash()).toBe(client2.getToolsetHash())
+    })
+
+    it('should produce same hash when deeply nested properties are in different order', () => {
+      const driver = createMockDriver()
+
+      // Tool with deeply nested properties in one order
+      const toolDeepOrderA: Tool = {
+        description: 'Complex tool',
+        // @ts-ignore
+        inputSchema: {
+          // @ts-ignore
+          type: 'object',
+          properties: {
+            config: {
+              type: 'object',
+              properties: {
+                zebra: { type: 'string' },
+                apple: { type: 'number' },
+              },
+            },
+          },
+        },
+      }
+
+      // Same tool with deeply nested properties in different order
+      const toolDeepOrderB: Tool = {
+        description: 'Complex tool',
+        // @ts-ignore
+        inputSchema: {
+          // @ts-ignore
+          type: 'object',
+          properties: {
+            config: {
+              type: 'object',
+              properties: {
+                apple: { type: 'number' },
+                zebra: { type: 'string' },
+              },
+            },
+          },
+        },
+      }
+
+      const client1 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: toolDeepOrderA },
+        openaiApiKey: 'test-key',
+      })
+
+      const client2 = createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: toolDeepOrderB },
+        openaiApiKey: 'test-key',
+      })
+
+      // Should produce same hash regardless of deeply nested property order
+      expect(client1.getToolsetHash()).toBe(client2.getToolsetHash())
+    })
+
+    it('should sort nested JSON in hash input for custom hash function', () => {
+      let receivedInput = ''
+      const customHashFn = vi.fn((input: string) => {
+        receivedInput = input
+        return 'hash'
+      })
+      const driver = createMockDriver()
+
+      // Tool with properties in reverse alphabetical order
+      const tool: Tool = {
+        description: 'A tool',
+        // @ts-ignore
+        inputSchema: {
+          // @ts-ignore
+          type: 'object',
+          properties: {
+            zebra: { type: 'string', description: 'Z param' },
+            apple: { type: 'number', description: 'A param' },
+          },
+        },
+      }
+
+      createMCPRag({
+        // @ts-ignore - mock model
+        model: {},
+        neo4j: driver,
+        tools: { myTool: tool },
+        openaiApiKey: 'test-key',
+        hashFunction: customHashFn,
+      })
+
+      const parsed = JSON.parse(receivedInput)
+
+      // Verify nested properties are sorted (apple before zebra)
+      const propKeys = Object.keys(parsed.myTool.inputSchema.properties)
+      expect(propKeys).toEqual(['apple', 'zebra'])
     })
   })
 })

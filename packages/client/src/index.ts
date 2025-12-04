@@ -89,6 +89,28 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   const activeHashFunction = hashFunction || defaultHashFunction
 
   /**
+   * Recursively sort all keys in an object/array for deterministic JSON serialization.
+   * This ensures the same data structure always produces the same JSON string
+   * regardless of the original property insertion order.
+   */
+  function sortObjectKeysDeep(obj: unknown): unknown {
+    if (obj === null || typeof obj !== 'object') {
+      return obj
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(sortObjectKeysDeep)
+    }
+
+    const sortedKeys = Object.keys(obj as Record<string, unknown>).sort()
+    const result: Record<string, unknown> = {}
+    for (const key of sortedKeys) {
+      result[key] = sortObjectKeysDeep((obj as Record<string, unknown>)[key])
+    }
+    return result
+  }
+
+  /**
    * Deep clone a tool object for hashing purposes.
    * Strips out non-serializable properties like 'execute' functions.
    */
@@ -103,11 +125,13 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
    * Compute the toolset hash by:
    * 1. Creating a deep clone of all tools (excluding execute functions)
    * 2. Sorting tools lexicographically by name
-   * 3. Converting to JSON string
-   * 4. Passing to hash function
+   * 3. Recursively sorting all nested object keys
+   * 4. Converting to JSON string
+   * 5. Passing to hash function
    *
    * This ensures any change to tool definitions (parameters, descriptions, etc.)
-   * will result in a different hash.
+   * will result in a different hash, and the same toolset always produces
+   * the same hash regardless of property insertion order.
    */
   function computeToolsetHash(): string {
     const toolEntries = Array.from(toolRegistry.entries())
@@ -115,7 +139,9 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       .map(([name, tool]) => [name, cloneToolForHashing(tool)])
 
     const sortedToolsObject = Object.fromEntries(toolEntries)
-    const jsonString = JSON.stringify(sortedToolsObject)
+    // Recursively sort all nested keys for deterministic serialization
+    const deepSortedObject = sortObjectKeysDeep(sortedToolsObject)
+    const jsonString = JSON.stringify(deepSortedObject)
     return activeHashFunction(jsonString)
   }
 
