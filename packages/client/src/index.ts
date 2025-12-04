@@ -59,6 +59,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     openaiApiKey,
     maxActiveTools = 10,
     migration,
+    dangerouslyAllowBrowser,
   } = config
 
   debug('Creating MCP RAG client with %d tools', Object.keys(tools).length)
@@ -76,6 +77,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   // Create OpenAI client for embeddings
   const openai = new OpenAI({
     apiKey: openaiApiKey,
+    dangerouslyAllowBrowser
   })
   const embeddingModel = 'text-embedding-3-small'
   debugEmbeddings('Using embedding model: %s', embeddingModel)
