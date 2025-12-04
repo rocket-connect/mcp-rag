@@ -84,7 +84,10 @@ describe('MCP RAG Integration Tests', () => {
       maxActiveTools: 10,
     })
 
-    await rag.sync({ waitForIndex: true })
+    const syncResult = await rag.sync({ waitForIndex: true })
+    expect(syncResult.hash).toBeDefined()
+    expect(typeof syncResult.hash).toBe('string')
+    expect(syncResult.hash.length).toBeGreaterThan(0)
   })
 
   afterAll(async () => {
@@ -170,7 +173,9 @@ describe('MCP RAG Integration Tests', () => {
     const tools = rag.getTools()
     expect(tools['calculate']).toBeDefined()
 
-    await rag.sync({ waitForIndex: true })
+    const syncResult = await rag.sync({ waitForIndex: true })
+    expect(syncResult.hash).toBeDefined()
+    expect(typeof syncResult.hash).toBe('string')
 
     const result = await rag.generateText({
       prompt: 'What is 2 + 2?',
@@ -210,7 +215,9 @@ describe('MCP RAG Integration Tests', () => {
       maxActiveTools: 1,
     })
 
-    await limitedRag.sync({ waitForIndex: true })
+    const syncResult = await limitedRag.sync({ waitForIndex: true })
+    expect(syncResult.hash).toBeDefined()
+    expect(typeof syncResult.hash).toBe('string')
 
     const result = await limitedRag.generateText({
       prompt: 'Use the tools',
