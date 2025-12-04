@@ -14,6 +14,7 @@ async function main() {
     // @mcp-rag/client - Vercel AI SDK Wrapper
     const rag = createMCPRag({
       model: openai('gpt-4o-mini'),
+      openaiApiKey: process.env.OPENAI_API_KEY || '',
       neo4j: neo4j.driver,
       tools: githubTools,
     })

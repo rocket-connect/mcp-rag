@@ -69,6 +69,7 @@ describe('RAG Tool Selection Benchmark', () => {
 
     mcpRagClient = createMCPRag({
       model: openai('gpt-4o-mini'),
+      openaiApiKey: process.env.OPENAI_API_KEY || '',
       neo4j: driver!,
       tools: allAISDKTools,
     })
