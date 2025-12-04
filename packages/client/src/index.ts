@@ -7,6 +7,8 @@ import {
   MCPRagClient,
   GenerateTextOptions,
   GenerateTextResultWrapper,
+  SyncResult,
+  HashFunction,
 } from './types'
 
 const debug = createDebug('@mcp-rag/client')
@@ -60,6 +62,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     maxActiveTools = 10,
     migration,
     dangerouslyAllowBrowser,
+    hashFunction,
   } = config
 
   debug('Creating MCP RAG client with %d tools', Object.keys(tools).length)
@@ -68,11 +71,86 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   // Internal state
   const toolRegistry = new Map(Object.entries(tools))
 
-  // Generate a toolset hash for this instance
-  const toolsetHash = generateToolsetHash(Object.keys(tools).sort().join(','))
+  /**
+   * Default hash function - simple bitwise hash for demo purposes.
+   * Can be overridden via config.hashFunction for browser environments.
+   */
+  const defaultHashFunction: HashFunction = (input: string): string => {
+    let hash = 0
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash
+    }
+    return `toolset-${Math.abs(hash).toString(16)}`
+  }
+
+  // Use custom hash function if provided, otherwise use default
+  const activeHashFunction = hashFunction || defaultHashFunction
+
+  /**
+   * Recursively sort all keys in an object/array for deterministic JSON serialization.
+   * This ensures the same data structure always produces the same JSON string
+   * regardless of the original property insertion order.
+   */
+  function sortObjectKeysDeep(obj: unknown): unknown {
+    if (obj === null || typeof obj !== 'object') {
+      return obj
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(sortObjectKeysDeep)
+    }
+
+    const sortedKeys = Object.keys(obj as Record<string, unknown>).sort()
+    const result: Record<string, unknown> = {}
+    for (const key of sortedKeys) {
+      result[key] = sortObjectKeysDeep((obj as Record<string, unknown>)[key])
+    }
+    return result
+  }
+
+  /**
+   * Deep clone a tool object for hashing purposes.
+   * Strips out non-serializable properties like 'execute' functions.
+   */
+  function cloneToolForHashing(tool: Tool): Record<string, unknown> {
+    return {
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+    }
+  }
+
+  /**
+   * Compute the toolset hash by:
+   * 1. Creating a deep clone of all tools (excluding execute functions)
+   * 2. Sorting tools lexicographically by name
+   * 3. Recursively sorting all nested object keys
+   * 4. Converting to JSON string
+   * 5. Passing to hash function
+   *
+   * This ensures any change to tool definitions (parameters, descriptions, etc.)
+   * will result in a different hash, and the same toolset always produces
+   * the same hash regardless of property insertion order.
+   */
+  function computeToolsetHash(): string {
+    const toolEntries = Array.from(toolRegistry.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, tool]) => [name, cloneToolForHashing(tool)])
+
+    const sortedToolsObject = Object.fromEntries(toolEntries)
+    // Recursively sort all nested keys for deterministic serialization
+    const deepSortedObject = sortObjectKeysDeep(sortedToolsObject)
+    const jsonString = JSON.stringify(deepSortedObject)
+    return activeHashFunction(jsonString)
+  }
+
+  // Generate initial toolset hash
+  let toolsetHash = computeToolsetHash()
   debug('Generated toolset hash: %s', toolsetHash)
 
-  const cypherBuilder = new CypherBuilder({ toolsetHash })
+  // CypherBuilder needs to be recreated when toolset changes
+  let cypherBuilder = new CypherBuilder({ toolsetHash })
 
   // Create OpenAI client for embeddings
   const openai = new OpenAI({
@@ -83,20 +161,6 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   debugEmbeddings('Using embedding model: %s', embeddingModel)
 
   let migrated = false
-
-  /**
-   * Generate a deterministic hash for the toolset
-   */
-  function generateToolsetHash(input: string): string {
-    // Simple hash function for demo - in production use crypto.createHash
-    let hash = 0
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i)
-      hash = (hash << 5) - hash + char
-      hash = hash & hash
-    }
-    return `toolset-${Math.abs(hash).toString(16)}`
-  }
 
   /**
    * Wait for vector index to be fully populated
@@ -429,10 +493,16 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
 
     async sync(
       options: { waitForIndex?: boolean; maxWaitMs?: number } = {}
-    ): Promise<void> {
+    ): Promise<SyncResult> {
       const { waitForIndex = true, maxWaitMs = 30000 } = options
 
       debug('sync() called - forcing re-migration')
+
+      // Recompute hash before sync to ensure it's up to date
+      toolsetHash = computeToolsetHash()
+      cypherBuilder = new CypherBuilder({ toolsetHash })
+      debug('Recomputed toolset hash: %s', toolsetHash)
+
       migrated = false // Force re-migration
       await ensureMigrated()
 
@@ -443,14 +513,23 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
         debug('Skipping index wait (waitForIndex=false)')
       }
 
-      debug('sync() completed')
+      debug('sync() completed with hash: %s', toolsetHash)
+      return { hash: toolsetHash }
     },
 
     addTool(name: string, tool: Tool): void {
       debug('Adding tool: %s', name)
       toolRegistry.set(name, tool)
       migrated = false // Force re-migration on next call
-      debugTools('Tool "%s" added. Total tools: %d', name, toolRegistry.size)
+      // Recompute hash after adding tool
+      toolsetHash = computeToolsetHash()
+      cypherBuilder = new CypherBuilder({ toolsetHash })
+      debugTools(
+        'Tool "%s" added. Total tools: %d, new hash: %s',
+        name,
+        toolRegistry.size,
+        toolsetHash
+      )
     },
 
     removeTool(name: string): void {
@@ -458,10 +537,14 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       const existed = toolRegistry.delete(name)
       if (existed) {
         migrated = false // Force re-migration on next call
+        // Recompute hash after removing tool
+        toolsetHash = computeToolsetHash()
+        cypherBuilder = new CypherBuilder({ toolsetHash })
         debugTools(
-          'Tool "%s" removed. Total tools: %d',
+          'Tool "%s" removed. Total tools: %d, new hash: %s',
           name,
-          toolRegistry.size
+          toolRegistry.size,
+          toolsetHash
         )
       } else {
         debugTools('Tool "%s" not found, nothing removed', name)
@@ -471,6 +554,10 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     getTools(): Record<string, Tool> {
       debug('getTools() called')
       return Object.fromEntries(toolRegistry)
+    },
+
+    getToolsetHash(): string {
+      return toolsetHash
     },
   }
 }

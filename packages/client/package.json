@@ -28,8 +28,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'no tests'",
-    "test:unit": "echo 'no tests'",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit/**",
     "test:integration": "vitest run tests/integration/** --config ./vitest.integration.config.ts"
   },
   "peerDependencies": {
