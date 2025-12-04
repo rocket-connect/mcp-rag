@@ -26,6 +26,7 @@ describe('MCP RAG Integration Tests', () => {
 
     rag = createMCPRag({
       model: openai('gpt-4o-mini'),
+      openaiApiKey: process.env.OPENAI_API_KEY || '',
       neo4j: driver,
       tools: {
         get_weather: tool({
@@ -187,6 +188,7 @@ describe('MCP RAG Integration Tests', () => {
   it('should respect maxActiveTools limit', async () => {
     const limitedRag = createMCPRag({
       model: openai('gpt-4o-mini'),
+      openaiApiKey: process.env.OPENAI_API_KEY || '',
       neo4j: driver,
       tools: {
         tool1: tool({

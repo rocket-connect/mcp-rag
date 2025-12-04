@@ -36,6 +36,7 @@ const debugGenerate = createDebug('@mcp-rag/client:generate')
  *
  * const rag = createMCPRag({
  *   model: openai('gpt-4o-mini'),
+ *   openaiApiKey: process.env.OPENAI_API_KEY || "",
  *   neo4j: driver,
  *   tools: {
  *     searchDocs: tool({
@@ -51,7 +52,14 @@ const debugGenerate = createDebug('@mcp-rag/client:generate')
  * ```
  */
 export function createMCPRag(config: MCPRagConfig): MCPRagClient {
-  const { model, neo4j: driver, tools, maxActiveTools = 10, migration } = config
+  const {
+    model,
+    neo4j: driver,
+    tools,
+    openaiApiKey,
+    maxActiveTools = 10,
+    migration,
+  } = config
 
   debug('Creating MCP RAG client with %d tools', Object.keys(tools).length)
   debugTools('Available tools: %O', Object.keys(tools))
@@ -67,7 +75,7 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
 
   // Create OpenAI client for embeddings
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || '',
+    apiKey: openaiApiKey,
   })
   const embeddingModel = 'text-embedding-3-small'
   debugEmbeddings('Using embedding model: %s', embeddingModel)

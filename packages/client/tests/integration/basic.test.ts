@@ -47,6 +47,7 @@ describe('OpenAI Client Integration Tests', () => {
     // Create the client with OpenAI model and a single tool
     const client = createMCPRag({
       model: openai('gpt-4o-mini'),
+      openaiApiKey: process.env.OPENAI_API_KEY || '',
       neo4j: driver,
       tools: {
         get_weather: testTool,
