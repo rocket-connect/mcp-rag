@@ -5,6 +5,9 @@ import { openai } from '@ai-sdk/openai'
 import neo4j, { Driver, Session } from 'neo4j-driver'
 import { tool } from 'ai'
 import { z } from 'zod'
+import util from 'util'
+
+const sleep = util.promisify(setTimeout)
 
 /**
  * Lifecycle Integration Tests for MCPRagClient
@@ -114,6 +117,7 @@ describe('Client Toolset Lifecycle Integration Tests', () => {
 
       // ============ STEP 4: TEARDOWN - Delete old toolset by hash ============
       const deleteResult = await client.deleteToolsetByHash(initialHash)
+      await sleep(1000)
 
       expect(deleteResult.deletedToolsets).toBe(1)
       expect(deleteResult.deletedTools).toBe(1)
@@ -211,6 +215,7 @@ describe('Client Toolset Lifecycle Integration Tests', () => {
       })
 
       const result = await client.deleteToolsetByHash('non-existent-hash')
+      await sleep(1000)
 
       expect(result.deletedToolsets).toBe(0)
       expect(result.deletedTools).toBe(0)
@@ -239,6 +244,7 @@ describe('Client Toolset Lifecycle Integration Tests', () => {
 
       // Delete
       const result = await client.deleteToolsetByHash(hash)
+      await sleep(1000)
 
       expect(result.deletedToolsets).toBe(1)
       expect(result.deletedTools).toBe(3)
@@ -277,6 +283,7 @@ describe('Client Toolset Lifecycle Integration Tests', () => {
 
       // Delete only the first one
       await client.deleteToolsetByHash(hash1)
+      await sleep(1000)
 
       // Verify first is gone
       expect(await client.getToolsetByHash(hash1)).toBeNull()
@@ -323,6 +330,8 @@ describe('Client Toolset Lifecycle Integration Tests', () => {
 
       // Client workflow: detect change, delete old, create new
       await client.deleteToolsetByHash(originalHash)
+      await sleep(1000)
+
       await client.sync()
 
       // Verify old is gone, new exists

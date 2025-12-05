@@ -3,7 +3,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { Driver, Session } from 'neo4j-driver'
 import { CypherBuilder } from '../../src/index.js'
 import { getDriver, closeDriver, clearDatabase } from './neo4j-helper'
-import type { Tool } from 'ai'
+import { tool } from 'ai'
+import { z } from 'zod'
 
 describe('Neo4j Integration Tests', () => {
   let driver: Driver
@@ -29,24 +30,14 @@ describe('Neo4j Integration Tests', () => {
   })
 
   it('should execute snapshotted cypher and verify data was inserted', async () => {
-    const searchTool: Tool = {
+    const searchTool = tool({
       description: 'A test tool for searching',
-      inputSchema: {
-        // @ts-ignore
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'Search query string',
-          },
-          limit: {
-            type: 'number',
-            description: 'Maximum number of results',
-          },
-        },
-        required: ['query'],
-      },
-    }
+      inputSchema: z.object({
+        query: z.string().describe('Search query string'),
+        limit: z.number().describe('Maximum number of results').optional(),
+      }),
+      execute: async () => ({ results: [] }),
+    })
 
     const tools = [
       {
@@ -110,20 +101,13 @@ describe('Neo4j Integration Tests', () => {
   })
 
   it('should handle MERGE correctly - no duplicates on re-execution', async () => {
-    const testTool: Tool = {
+    const testTool = tool({
       description: 'Test tool',
-      inputSchema: {
-        // @ts-ignore
-        type: 'object',
-        properties: {
-          input: {
-            type: 'string',
-            description: 'Input parameter',
-          },
-        },
-        required: ['input'],
-      },
-    }
+      inputSchema: z.object({
+        input: z.string().describe('Input parameter'),
+      }),
+      execute: async () => ({ status: 'ok' }),
+    })
 
     const tools = [
       {
@@ -185,20 +169,13 @@ describe('Neo4j Integration Tests', () => {
   })
 
   it('should store embeddings when provided', async () => {
-    const embeddedTool: Tool = {
+    const embeddedTool = tool({
       description: 'Tool with embeddings',
-      inputSchema: {
-        // @ts-ignore
-        type: 'object',
-        properties: {
-          text: {
-            type: 'string',
-            description: 'Text input',
-          },
-        },
-        required: ['text'],
-      },
-    }
+      inputSchema: z.object({
+        text: z.string().describe('Text input'),
+      }),
+      execute: async () => ({ status: 'ok' }),
+    })
 
     const tools = [
       {
@@ -256,35 +233,21 @@ describe('Neo4j Integration Tests', () => {
   })
 
   it('should handle mixed tools with and without embeddings', async () => {
-    const tool1: Tool = {
+    const tool1 = tool({
       description: 'First tool',
-      inputSchema: {
-        // @ts-ignore
-        type: 'object',
-        properties: {
-          param1: {
-            type: 'string',
-            description: 'Parameter 1',
-          },
-        },
-        required: ['param1'],
-      },
-    }
+      inputSchema: z.object({
+        param1: z.string().describe('Parameter 1'),
+      }),
+      execute: async () => ({ status: 'ok' }),
+    })
 
-    const tool2: Tool = {
+    const tool2 = tool({
       description: 'Second tool',
-      inputSchema: {
-        // @ts-ignore
-        type: 'object',
-        properties: {
-          param2: {
-            type: 'string',
-            description: 'Parameter 2',
-          },
-        },
-        required: ['param2'],
-      },
-    }
+      inputSchema: z.object({
+        param2: z.string().describe('Parameter 2'),
+      }),
+      execute: async () => ({ status: 'ok' }),
+    })
 
     const tools = [
       {

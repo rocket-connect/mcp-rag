@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { generateText, Tool } from 'ai'
+import { asSchema } from '@ai-sdk/provider-utils'
 import { CypherBuilder } from '@mcp-rag/neo4j'
 import createDebug from 'debug'
 import {
@@ -331,10 +332,10 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     debugEmbeddings('Embedding tool text: "%s"', toolText)
     const toolEmbedding = await generateEmbedding(toolText)
 
-    // Extract schema from AI SDK tool
-    const schema =
-      (tool.inputSchema as any)?.jsonSchema || (tool.inputSchema as any) || {}
-    const parameters = schema.properties || {}
+    // Extract schema from AI SDK tool using asSchema to handle Zod schemas
+    const normalizedSchema = asSchema(tool.inputSchema)
+    const jsonSchema = normalizedSchema.jsonSchema || {}
+    const parameters = jsonSchema.properties || {}
 
     debugEmbeddings(
       'Tool "%s" has %d parameters to embed',

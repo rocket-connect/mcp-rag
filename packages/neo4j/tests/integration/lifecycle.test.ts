@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { Driver, Session } from 'neo4j-driver'
 import { CypherBuilder } from '../../src/index.js'
 import { getDriver, closeDriver, clearDatabase } from './neo4j-helper'
-import type { Tool } from 'ai'
+import { tool } from 'ai'
+import { z } from 'zod'
 
 /**
  * Lifecycle Integration Tests
@@ -21,24 +21,14 @@ describe('Toolset Lifecycle Integration Tests', () => {
   const lifecycleHash = 'lifecycle-test-hash-v1'
   const updatedHash = 'lifecycle-test-hash-v2'
 
-  const mockTool: Tool = {
+  const mockTool = tool({
     description: 'A lifecycle test tool',
-    inputSchema: {
-      // @ts-ignore
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          description: 'Action to perform',
-        },
-        target: {
-          type: 'string',
-          description: 'Target resource',
-        },
-      },
-      required: ['action'],
-    },
-  }
+    inputSchema: z.object({
+      action: z.string().describe('Action to perform'),
+      target: z.string().describe('Target resource'),
+    }),
+    execute: async () => ({ status: 'ok' }),
+  })
 
   const mockVector = Array(1536).fill(0.1)
 
@@ -110,7 +100,14 @@ describe('Toolset Lifecycle Integration Tests', () => {
         tools: [
           {
             name: 'lifecycleTool',
-            tool: { ...mockTool, description: 'Updated lifecycle tool' },
+            tool: tool({
+              description: 'Updated lifecycle tool',
+              inputSchema: z.object({
+                action: z.string().describe('Action to perform'),
+                target: z.string().describe('Target resource'),
+              }),
+              execute: async () => ({ status: 'ok' }),
+            }),
             embeddings: {
               tool: mockVector,
               parameters: { action: mockVector, target: mockVector },
@@ -119,16 +116,13 @@ describe('Toolset Lifecycle Integration Tests', () => {
           },
           {
             name: 'newTool',
-            tool: {
+            tool: tool({
               description: 'A new tool added in v2',
-              inputSchema: {
-                // @ts-ignore
-                type: 'object',
-                properties: {
-                  input: { type: 'string', description: 'Input value' },
-                },
-              },
-            },
+              inputSchema: z.object({
+                input: z.string().describe('Input value'),
+              }),
+              execute: async () => ({ status: 'ok' }),
+            }),
             embeddings: {
               tool: mockVector,
               parameters: { input: mockVector },
@@ -441,7 +435,14 @@ describe('Toolset Lifecycle Integration Tests', () => {
         tools: [
           {
             name: 'myTool',
-            tool: { ...mockTool, description: 'Updated description' },
+            tool: tool({
+              description: 'Updated description',
+              inputSchema: z.object({
+                action: z.string().describe('Action to perform'),
+                target: z.string().describe('Target resource'),
+              }),
+              execute: async () => ({ status: 'ok' }),
+            }),
             embeddings: {
               tool: mockVector,
               parameters: { action: mockVector, target: mockVector },

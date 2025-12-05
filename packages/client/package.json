@@ -37,6 +37,7 @@
     "neo4j-driver": ">6.0.0"
   },
   "dependencies": {
+    "@ai-sdk/provider-utils": "^3.0.17",
     "@mcp-rag/neo4j": "workspace:*",
     "@types/debug": "^4.1.12",
     "debug": "^4.4.3",

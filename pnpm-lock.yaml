@@ -124,6 +124,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@ai-sdk/provider-utils':
+        specifier: ^3.0.17
+        version: 3.0.17(zod@4.1.12)
       '@mcp-rag/neo4j':
         specifier: workspace:*
         version: link:../neo4j
@@ -158,6 +161,9 @@ importers:
 
   packages/neo4j:
     dependencies:
+      '@ai-sdk/provider-utils':
+        specifier: ^3.0.17
+        version: 3.0.17(zod@4.1.12)
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
