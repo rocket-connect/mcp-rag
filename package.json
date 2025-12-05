@@ -1,6 +1,6 @@
 {
   "name": "mcp-rag",
-  "version": "0.0.0",
+  "version": "0.0.4",
   "description": "AI SDK tool orchestration without the headache",
   "type": "module",
   "engines": {
