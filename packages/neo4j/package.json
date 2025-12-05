@@ -52,6 +52,7 @@
   "author": "rconnect.tech",
   "license": "MIT",
   "dependencies": {
+    "@ai-sdk/provider-utils": "^3.0.17",
     "@types/debug": "^4.1.12",
     "debug": "^4.4.3",
     "dedent": "^1.7.0",

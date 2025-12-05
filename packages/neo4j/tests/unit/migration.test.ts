@@ -1,22 +1,18 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { describe, it, expect } from 'vitest'
 import { CypherBuilder } from '../../src/index'
-import type { Tool } from 'ai'
+import { tool } from 'ai'
+import { z } from 'zod'
 
 const toolsetHash = 'migration-test-hash'
 
-const mockTool: Tool = {
+const mockTool = tool({
   description: 'Migration test tool',
-  inputSchema: {
-    // @ts-ignore
-    type: 'object',
-    properties: {
-      action: { type: 'string', description: 'Action to perform' },
-      target: { type: 'string', description: 'Target resource' },
-    },
-    required: ['action'],
-  },
-}
+  inputSchema: z.object({
+    action: z.string().describe('Action to perform'),
+    target: z.string().describe('Target resource').optional(),
+  }),
+  execute: async () => ({ status: 'ok' }),
+})
 
 const mockVector = Array(1536).fill(0.2)
 
@@ -118,14 +114,11 @@ describe('CypherBuilder - Migration', () => {
   describe('parameter handling', () => {
     it('should handle tools with no parameters', () => {
       const builder = new CypherBuilder({ toolsetHash })
-      const noParamTool: Tool = {
+      const noParamTool = tool({
         description: 'Tool with no parameters',
-        inputSchema: {
-          // @ts-ignore
-          type: 'object',
-          properties: {},
-        },
-      }
+        inputSchema: z.object({}),
+        execute: async () => ({ status: 'ok' }),
+      })
 
       const result = builder.migrate({
         tools: [
@@ -148,21 +141,17 @@ describe('CypherBuilder - Migration', () => {
 
     it('should handle tools with many parameters', () => {
       const builder = new CypherBuilder({ toolsetHash })
-      const manyParamTool: Tool = {
+      const manyParamTool = tool({
         description: 'Tool with many parameters',
-        inputSchema: {
-          // @ts-ignore
-          type: 'object',
-          properties: {
-            param1: { type: 'string' },
-            param2: { type: 'number' },
-            param3: { type: 'boolean' },
-            param4: { type: 'string' },
-            param5: { type: 'array' },
-          },
-          required: ['param1', 'param3'],
-        },
-      }
+        inputSchema: z.object({
+          param1: z.string(),
+          param2: z.number().optional(),
+          param3: z.boolean(),
+          param4: z.string().optional(),
+          param5: z.array(z.string()).optional(),
+        }),
+        execute: async () => ({ status: 'ok' }),
+      })
 
       const result = builder.migrate({
         tools: [
@@ -184,11 +173,31 @@ describe('CypherBuilder - Migration', () => {
         ],
       })
 
-      expect(result.params.t0_param0_name).toBe('param1')
-      expect(result.params.t0_param0_required).toBe(true)
-      expect(result.params.t0_param2_name).toBe('param3')
-      expect(result.params.t0_param2_required).toBe(true)
-      expect(result.params.t0_param1_required).toBe(false)
+      // Verify we have 5 parameters created
+      // Check that required/optional status is properly set
+      const paramNames = [
+        result.params.t0_param0_name,
+        result.params.t0_param1_name,
+        result.params.t0_param2_name,
+        result.params.t0_param3_name,
+        result.params.t0_param4_name,
+      ]
+      expect(paramNames).toContain('param1')
+      expect(paramNames).toContain('param2')
+      expect(paramNames).toContain('param3')
+      expect(paramNames).toContain('param4')
+      expect(paramNames).toContain('param5')
+
+      // Find param1 and param3 (required) and param2 (optional)
+      const findParamIndex = (name: string) =>
+        paramNames.findIndex(n => n === name)
+      const param1Idx = findParamIndex('param1')
+      const param2Idx = findParamIndex('param2')
+      const param3Idx = findParamIndex('param3')
+
+      expect(result.params[`t0_param${param1Idx}_required`]).toBe(true)
+      expect(result.params[`t0_param${param2Idx}_required`]).toBe(false)
+      expect(result.params[`t0_param${param3Idx}_required`]).toBe(true)
     })
   })
 

@@ -1,5 +1,6 @@
 import dedent from 'dedent'
 import type { Tool } from 'ai'
+import { asSchema } from '@ai-sdk/provider-utils'
 import neo4j from 'neo4j-driver'
 import createDebug from 'debug'
 
@@ -162,9 +163,12 @@ export class CypherBuilder {
     `
     statements.push(toolStatement)
 
-    const schema = tool.inputSchema as any
-    const parameters = schema?.properties || {}
-    const required = schema?.required || []
+    // Handle both AI SDK tool format (Zod schemas via asSchema) and raw JSON schema format
+    // asSchema() normalizes Zod schemas, plain JSON schemas, and Schema objects to a unified Schema type
+    const normalizedSchema = asSchema(tool.inputSchema)
+    const jsonSchema = normalizedSchema.jsonSchema || {}
+    const parameters = jsonSchema?.properties || {}
+    const required = (jsonSchema as any)?.required || []
 
     debug(
       'createDecomposedTool: Tool "%s" has %d parameters',

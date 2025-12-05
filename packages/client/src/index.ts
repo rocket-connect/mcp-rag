@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { generateText, Tool } from 'ai'
+import { asSchema } from '@ai-sdk/provider-utils'
 import { CypherBuilder } from '@mcp-rag/neo4j'
 import createDebug from 'debug'
 import {
@@ -9,6 +10,8 @@ import {
   GenerateTextResultWrapper,
   SyncResult,
   HashFunction,
+  ToolsetInfo,
+  DeleteToolsetResult,
 } from './types'
 
 const debug = createDebug('@mcp-rag/client')
@@ -305,10 +308,15 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   }
 
   async function defaultShouldMigrate(session: any): Promise<boolean> {
-    debugNeo4j('Checking if migration is needed')
-    const result = await session.run('MATCH (t:Tool) RETURN count(t) as count')
+    debugNeo4j('Checking if migration is needed for hash: %s', toolsetHash)
+    // Check if this specific toolset hash already exists
+    const result = await session.run(
+      'MATCH (ts:ToolSet {hash: $hash}) RETURN count(ts) as count',
+      { hash: toolsetHash }
+    )
     const count = result.records[0].get('count').toInt()
-    debugNeo4j('Found %d existing tools in database', count)
+    debugNeo4j('Found %d existing toolsets with hash: %s', count, toolsetHash)
+    // Migrate if this specific toolset doesn't exist yet
     return count === 0
   }
 
@@ -324,10 +332,10 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
     debugEmbeddings('Embedding tool text: "%s"', toolText)
     const toolEmbedding = await generateEmbedding(toolText)
 
-    // Extract schema from AI SDK tool
-    const schema =
-      (tool.inputSchema as any)?.jsonSchema || (tool.inputSchema as any) || {}
-    const parameters = schema.properties || {}
+    // Extract schema from AI SDK tool using asSchema to handle Zod schemas
+    const normalizedSchema = asSchema(tool.inputSchema)
+    const jsonSchema = normalizedSchema.jsonSchema || {}
+    const parameters = jsonSchema.properties || {}
 
     debugEmbeddings(
       'Tool "%s" has %d parameters to embed',
@@ -558,6 +566,93 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
 
     getToolsetHash(): string {
       return toolsetHash
+    },
+
+    async getToolsetByHash(hash: string): Promise<ToolsetInfo | null> {
+      debug('getToolsetByHash() called with hash: %s', hash)
+      const session = driver.session()
+      try {
+        const builder = new CypherBuilder({ toolsetHash: hash })
+        const statement = builder.getToolsetByHash()
+        debugNeo4j('Executing getToolsetByHash query')
+        const result = await session.run(statement.cypher, statement.params)
+
+        if (result.records.length === 0) {
+          debug('getToolsetByHash: No toolset found with hash: %s', hash)
+          return null
+        }
+
+        const record = result.records[0]
+        const toolsetInfo: ToolsetInfo = {
+          hash: record.get('hash'),
+          updatedAt: record.get('updatedAt').toStandardDate(),
+          toolCount:
+            typeof record.get('toolCount')?.toInt === 'function'
+              ? record.get('toolCount').toInt()
+              : record.get('toolCount'),
+          tools: record.get('tools'),
+        }
+
+        debug(
+          'getToolsetByHash: Found toolset with %d tools',
+          toolsetInfo.toolCount
+        )
+        return toolsetInfo
+      } finally {
+        await session.close()
+      }
+    },
+
+    async deleteToolsetByHash(hash: string): Promise<DeleteToolsetResult> {
+      debug('deleteToolsetByHash() called with hash: %s', hash)
+      const session = driver.session()
+      try {
+        const builder = new CypherBuilder({ toolsetHash: hash })
+        const statement = builder.deleteToolsetByHash()
+        debugNeo4j('Executing deleteToolsetByHash query')
+        const result = await session.run(statement.cypher, statement.params)
+
+        if (result.records.length === 0) {
+          debug('deleteToolsetByHash: No toolset found with hash: %s', hash)
+          return {
+            deletedToolsets: 0,
+            deletedTools: 0,
+            deletedParams: 0,
+            deletedReturnTypes: 0,
+          }
+        }
+
+        const record = result.records[0]
+        const deleteResult: DeleteToolsetResult = {
+          deletedToolsets:
+            typeof record.get('deletedToolsets')?.toInt === 'function'
+              ? record.get('deletedToolsets').toInt()
+              : record.get('deletedToolsets'),
+          deletedTools:
+            typeof record.get('deletedTools')?.toInt === 'function'
+              ? record.get('deletedTools').toInt()
+              : record.get('deletedTools'),
+          deletedParams:
+            typeof record.get('deletedParams')?.toInt === 'function'
+              ? record.get('deletedParams').toInt()
+              : record.get('deletedParams'),
+          deletedReturnTypes:
+            typeof record.get('deletedReturnTypes')?.toInt === 'function'
+              ? record.get('deletedReturnTypes').toInt()
+              : record.get('deletedReturnTypes'),
+        }
+
+        debug(
+          'deleteToolsetByHash: Deleted %d toolsets, %d tools, %d params, %d returnTypes',
+          deleteResult.deletedToolsets,
+          deleteResult.deletedTools,
+          deleteResult.deletedParams,
+          deleteResult.deletedReturnTypes
+        )
+        return deleteResult
+      } finally {
+        await session.close()
+      }
     },
   }
 }

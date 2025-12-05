@@ -1,28 +1,18 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { describe, it, expect } from 'vitest'
 import { CypherBuilder } from '../../src/index'
-import type { Tool } from 'ai'
+import { tool } from 'ai'
+import { z } from 'zod'
 
 const toolsetHash = 'test-toolset-hash'
 
-const mockTool: Tool = {
+const mockTool = tool({
   description: 'A test tool for searching',
-  inputSchema: {
-    // @ts-ignore
-    type: 'object',
-    properties: {
-      query: {
-        type: 'string',
-        description: 'Search query string',
-      },
-      limit: {
-        type: 'number',
-        description: 'Maximum number of results',
-      },
-    },
-    required: ['query'],
-  },
-}
+  inputSchema: z.object({
+    query: z.string().describe('Search query string'),
+    limit: z.number().describe('Maximum number of results').optional(),
+  }),
+  execute: async () => ({ results: [] }),
+})
 
 const mockVector = Array(1536).fill(0.1)
 
@@ -79,17 +69,13 @@ describe('CypherBuilder - Basic Operations', () => {
 
     it('should handle tool without optional parameters', () => {
       const builder = new CypherBuilder({ toolsetHash })
-      const simpleTool: Tool = {
+      const simpleTool = tool({
         description: 'Simple tool',
-        inputSchema: {
-          // @ts-ignore
-          type: 'object',
-          properties: {
-            input: { type: 'string' },
-          },
-          required: ['input'],
-        },
-      }
+        inputSchema: z.object({
+          input: z.string(),
+        }),
+        execute: async () => ({ status: 'ok' }),
+      })
 
       const result = builder.createDecomposedTool({
         name: 'simpleTool',

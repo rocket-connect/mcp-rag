@@ -80,6 +80,50 @@ export interface SyncResult {
   hash: string
 }
 
+/** Serialized parameter info stored in Neo4j */
+export interface StoredParameter {
+  name: string
+  type: string
+  description: string
+  required: boolean
+}
+
+/** Serialized return type info stored in Neo4j */
+export interface StoredReturnType {
+  type: string
+  description: string
+}
+
+/** Serialized tool info stored in Neo4j (without execute function) */
+export interface StoredTool {
+  name: string
+  description: string
+  parameters: StoredParameter[]
+  returnType: StoredReturnType
+}
+
+export interface ToolsetInfo {
+  /** The hash of the toolset */
+  hash: string
+  /** When the toolset was last updated */
+  updatedAt: Date
+  /** Number of tools in the toolset */
+  toolCount: number
+  /** The tools in the toolset */
+  tools: StoredTool[]
+}
+
+export interface DeleteToolsetResult {
+  /** Number of toolsets deleted (0 or 1) */
+  deletedToolsets: number
+  /** Number of tools deleted */
+  deletedTools: number
+  /** Number of parameters deleted */
+  deletedParams: number
+  /** Number of return types deleted */
+  deletedReturnTypes: number
+}
+
 export interface MCPRagClient {
   generateText(options: GenerateTextOptions): Promise<GenerateTextResultWrapper>
   sync(options?: {
@@ -91,4 +135,8 @@ export interface MCPRagClient {
   getTools(): Record<string, Tool>
   /** Get the current toolset hash */
   getToolsetHash(): string
+  /** Get toolset info by hash from Neo4j */
+  getToolsetByHash(hash: string): Promise<ToolsetInfo | null>
+  /** Delete toolset by hash from Neo4j */
+  deleteToolsetByHash(hash: string): Promise<DeleteToolsetResult>
 }
