@@ -12,6 +12,8 @@ import {
   HashFunction,
   ToolsetInfo,
   DeleteToolsetResult,
+  GetActiveToolsOptions,
+  GetActiveToolsResult,
 } from './types'
 
 const debug = createDebug('@mcp-rag/client')
@@ -372,12 +374,27 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
   }
 
   /**
+   * Build a tool set record from tool names
+   */
+  function buildToolSet(toolNames: string[]): Record<string, Tool> {
+    const toolSet: Record<string, Tool> = {}
+    for (const name of toolNames) {
+      const tool = toolRegistry.get(name)
+      if (tool) {
+        toolSet[name] = tool
+        debugTools('Added tool to set: %s', name)
+      }
+    }
+    return toolSet
+  }
+
+  /**
    * Select active tools based on semantic similarity using CypherBuilder
    */
   async function selectActiveTools(
     prompt: string,
     maxTools: number
-  ): Promise<string[]> {
+  ): Promise<GetActiveToolsResult> {
     debug('Selecting active tools for prompt (max: %d)', maxTools)
     debugTools('Prompt: "%s"', prompt)
 
@@ -397,10 +414,10 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       })
 
       const result = await session.run(statement.cypher, statement.params)
-      const selectedTools = result.records.map(record => record.get('name'))
+      const names = result.records.map(record => record.get('name'))
 
-      debug('Selected %d tools', selectedTools.length)
-      debugTools('Selected tools: %O', selectedTools)
+      debug('Selected %d tools', names.length)
+      debugTools('Selected tools: %O', names)
 
       // Log relevance scores
       result.records.forEach(record => {
@@ -411,7 +428,10 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
         )
       })
 
-      return selectedTools
+      return {
+        names,
+        tools: buildToolSet(names),
+      }
     } catch (error) {
       debug('Tool selection failed: %O', error)
       throw error
@@ -438,27 +458,25 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       // Determine which tools to use
       const promptText =
         prompt || (messages?.[messages.length - 1] as any)?.content || ''
-      const selectedTools = activeTools
-        ? activeTools.filter(name => {
-            const has = toolRegistry.has(name)
-            if (!has) {
-              debugTools('Warning: requested tool "%s" not found', name)
-            }
-            return has
-          })
-        : await selectActiveTools(promptText, maxActiveTools)
 
-      debug('Using %d tools for generation', selectedTools.length)
-
-      // Build active tool set
-      const activeToolSet: Record<string, Tool> = {}
-      for (const name of selectedTools) {
-        const tool = toolRegistry.get(name)
-        if (tool) {
-          activeToolSet[name] = tool
-          debugTools('Added tool to active set: %s', name)
-        }
+      let activeToolSet: Record<string, Tool>
+      if (activeTools) {
+        // Use explicitly provided tools
+        const validNames = activeTools.filter(name => {
+          const has = toolRegistry.has(name)
+          if (!has) {
+            debugTools('Warning: requested tool "%s" not found', name)
+          }
+          return has
+        })
+        activeToolSet = buildToolSet(validNames)
+      } else {
+        // Use semantic search to select tools
+        const result = await selectActiveTools(promptText, maxActiveTools)
+        activeToolSet = result.tools
       }
+
+      debug('Using %d tools for generation', Object.keys(activeToolSet).length)
 
       // Call AI SDK's generateText with proper typing
       debugGenerate('Calling AI SDK generateText')
@@ -497,6 +515,17 @@ export function createMCPRag(config: MCPRagConfig): MCPRagClient {
       return {
         result,
       }
+    },
+
+    async getActiveTools(
+      options: GetActiveToolsOptions
+    ): Promise<GetActiveToolsResult> {
+      const { prompt, maxTools = maxActiveTools } = options
+      debugGenerate('getActiveTools called')
+      debugGenerate('Prompt: "%s", maxTools: %d', prompt, maxTools)
+
+      await ensureMigrated()
+      return selectActiveTools(prompt, maxTools)
     },
 
     async sync(

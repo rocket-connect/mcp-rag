@@ -124,8 +124,42 @@ export interface DeleteToolsetResult {
   deletedReturnTypes: number
 }
 
+export interface GetActiveToolsOptions {
+  /** The prompt to use for semantic tool selection */
+  prompt: string
+  /** Maximum number of tools to return (defaults to maxActiveTools from config) */
+  maxTools?: number
+}
+
+export interface GetActiveToolsResult {
+  /** The selected tools as a record, ready to pass to AI SDK's generateText */
+  tools: Record<string, Tool>
+  /** The names of the selected tools */
+  names: string[]
+}
+
 export interface MCPRagClient {
   generateText(options: GenerateTextOptions): Promise<GenerateTextResultWrapper>
+  /**
+   * Get active tools based on semantic similarity to a prompt.
+   * Use this when you want to manage AI SDK calls yourself but still
+   * want RAG-based tool selection.
+   *
+   * @example
+   * ```typescript
+   * const { tools, names } = await client.getActiveTools({
+   *   prompt: 'What is the weather like?'
+   * })
+   *
+   * // Use with AI SDK directly
+   * const result = await generateText({
+   *   model: openai('gpt-4o'),
+   *   tools,
+   *   prompt: 'What is the weather like?'
+   * })
+   * ```
+   */
+  getActiveTools(options: GetActiveToolsOptions): Promise<GetActiveToolsResult>
   sync(options?: {
     waitForIndex?: boolean
     maxWaitMs?: number
