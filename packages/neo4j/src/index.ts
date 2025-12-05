@@ -162,7 +162,9 @@ export class CypherBuilder {
     `
     statements.push(toolStatement)
 
-    const schema = tool.inputSchema as any
+    // Handle both AI SDK tool format (with jsonSchema wrapper) and raw schema format
+    const rawSchema = tool.inputSchema as any
+    const schema = rawSchema?.jsonSchema || rawSchema || {}
     const parameters = schema?.properties || {}
     const required = schema?.required || []
 
